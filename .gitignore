@@ -1,0 +1,22 @@
+# Node
+node_modules/
+.npm/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+
+# Rust
+**/target/
+Cargo.lock
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# Logs
+*.log

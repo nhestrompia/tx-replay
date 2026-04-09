@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 38 35% 98%;
+  --foreground: 220 15% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 15% 12%;
+  --primary: 208 90% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 190 24% 92%;
+  --secondary-foreground: 220 20% 20%;
+  --muted: 210 20% 94%;
+  --muted-foreground: 220 10% 35%;
+  --accent: 200 80% 92%;
+  --accent-foreground: 220 20% 20%;
+  --border: 210 20% 86%;
+  --input: 210 20% 86%;
+  --ring: 208 90% 45%;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground;
+  font-family: "Space Grotesk", "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+  background-image: radial-gradient(circle at 20% 0%, rgba(42, 160, 208, 0.12), transparent 34%);
+}
