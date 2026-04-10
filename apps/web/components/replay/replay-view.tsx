@@ -87,7 +87,6 @@ function ReplayLoadedView({ replay }: { replay: NonNullable<ReturnType<typeof us
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <ReplayChart
           candles={replay.candles}
-          events={replay.events}
           cursor={player.cursor}
           replayStart={replay.replayStart}
           replayEnd={replay.replayEnd}

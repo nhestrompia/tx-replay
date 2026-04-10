@@ -398,7 +398,7 @@ impl HyperliquidClient {
             "endTime": end_time,
         });
 
-        let rows: Vec<Value> = self
+        let root: Value = self
             .http
             .post(&self.base_url)
             .json(&payload)
@@ -410,6 +410,22 @@ impl HyperliquidClient {
             .json()
             .await
             .context("failed to decode funding history")?;
+
+        let rows = match root {
+            Value::Array(items) => items,
+            Value::Object(map) => {
+                if let Some(Value::Array(items)) = map.get("fundingHistory") {
+                    items.clone()
+                } else if let Some(Value::Array(items)) = map.get("data") {
+                    items.clone()
+                } else if let Some(Value::Array(items)) = map.get("history") {
+                    items.clone()
+                } else {
+                    Vec::new()
+                }
+            }
+            _ => Vec::new(),
+        };
 
         let mut out = Vec::new();
         for row in rows {
