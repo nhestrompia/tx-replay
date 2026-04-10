@@ -74,6 +74,11 @@ export function ReplayChart({ candles, events, cursor, replayStart, replayEnd }:
     () => Math.floor(Date.now() / 1000) - replayEndSec,
     [replayEndSec]
   )
+  const progress = Math.max(
+    0,
+    Math.min(1, (cursor - replayStart) / Math.max(1, replayEnd - replayStart))
+  )
+  const revealRightInset = `${(1 - progress) * 100}%`
 
   let chartCandles = ordered.map((candle) => toLivelineCandle(candle, timeOffsetSec))
   if (chartCandles.length === 1) {
@@ -88,10 +93,30 @@ export function ReplayChart({ candles, events, cursor, replayStart, replayEnd }:
     value: candle.close
   }))
   const liveCandle = live ? toLivelineCandle(live, timeOffsetSec) : undefined
+  const formatTime = (t: number) => formatAxisTime(t - timeOffsetSec, includeDateInAxis)
 
   return (
     <div className="relative h-[420px] w-full overflow-hidden rounded-lg border bg-white">
-      <div className="absolute inset-0 p-2">
+      <div className="absolute inset-0 p-2 opacity-30">
+        <Liveline
+          data={lineData}
+          value={chartCandles[chartCandles.length - 1]?.close ?? 0}
+          mode="candle"
+          candles={chartCandles}
+          liveCandle={chartCandles[chartCandles.length - 1]}
+          candleWidth={candleWidth}
+          window={chartWindowSeconds}
+          theme="light"
+          color="#64748b"
+          grid={false}
+          scrub={false}
+          pulse={false}
+          lineMode={false}
+          formatTime={formatTime}
+        />
+      </div>
+
+      <div className="absolute inset-0 p-2" style={{ clipPath: `inset(0 ${revealRightInset} 0 0)` }}>
         <Liveline
           data={lineData}
           value={live?.close ?? 0}
@@ -105,7 +130,7 @@ export function ReplayChart({ candles, events, cursor, replayStart, replayEnd }:
           grid
           scrub
           lineMode={false}
-          formatTime={(t) => formatAxisTime(t - timeOffsetSec, includeDateInAxis)}
+          formatTime={formatTime}
         />
       </div>
 
