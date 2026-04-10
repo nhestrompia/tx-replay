@@ -1,5 +1,44 @@
+const DATE_TIME_LONG = new Intl.DateTimeFormat(undefined, {
+  year: "numeric",
+  month: "short",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false
+})
+
+const DATE_TIME_SHORT = new Intl.DateTimeFormat(undefined, {
+  year: "numeric",
+  month: "short",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false
+})
+
+const TIME_ONLY = new Intl.DateTimeFormat(undefined, {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false
+})
+
 export function formatDate(ts: number): string {
-  return new Date(ts).toLocaleString()
+  return DATE_TIME_LONG.format(new Date(ts))
+}
+
+export function formatDateShort(ts: number): string {
+  return DATE_TIME_SHORT.format(new Date(ts))
+}
+
+export function formatTime(ts: number): string {
+  return TIME_ONLY.format(new Date(ts))
+}
+
+export function formatAxisTime(unixSeconds: number, includeDate = false): string {
+  const ts = unixSeconds * 1000
+  return includeDate ? formatDateShort(ts) : formatTime(ts)
 }
 
 export function formatDuration(ms: number): string {

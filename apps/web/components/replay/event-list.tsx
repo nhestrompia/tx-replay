@@ -1,4 +1,5 @@
 import { ReplayEvent } from "@/lib/types"
+import { formatDateShort } from "@/lib/format"
 
 const LABELS: Record<ReplayEvent["event_type"], string> = {
   entry: "Entry",
@@ -21,7 +22,7 @@ export function EventList({ events, cursor }: EventListProps) {
           const isPassed = event.timestamp <= cursor
           return (
             <li key={`${event.timestamp}-${idx}`} className={isPassed ? "text-foreground" : "text-muted-foreground"}>
-              {new Date(event.timestamp).toLocaleTimeString()} · {LABELS[event.event_type]} · {event.fill_size.toFixed(4)} @ {event.fill_price.toFixed(2)}
+              {formatDateShort(event.timestamp)} · {LABELS[event.event_type]} · {event.fill_size.toFixed(4)} @ {event.fill_price.toFixed(2)}
             </li>
           )
         })}

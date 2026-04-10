@@ -1,9 +1,9 @@
 "use client"
 
-import { Pause, Play, RotateCcw } from "lucide-react"
+import { Pause, Play, RotateCcw, StepBack, StepForward } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { formatDate } from "@/lib/format"
+import { formatDateShort } from "@/lib/format"
 
 type ReplayControlsProps = {
   isPlaying: boolean
@@ -14,6 +14,8 @@ type ReplayControlsProps = {
   onPlay: () => void
   onPause: () => void
   onReset: () => void
+  onStepForward: () => void
+  onStepBack: () => void
   onCursorChange: (value: number) => void
   onSpeedChange: (value: number) => void
 }
@@ -35,6 +37,14 @@ export function ReplayControls(props: ReplayControlsProps) {
             <Play className="mr-1 h-4 w-4" /> Play
           </Button>
         )}
+
+        <Button size="sm" variant="outline" onClick={props.onStepBack}>
+          <StepBack className="mr-1 h-4 w-4" /> Step Back
+        </Button>
+
+        <Button size="sm" variant="outline" onClick={props.onStepForward}>
+          <StepForward className="mr-1 h-4 w-4" /> Step Forward
+        </Button>
 
         <Button size="sm" variant="outline" onClick={props.onReset}>
           <RotateCcw className="mr-1 h-4 w-4" /> Reset
@@ -64,9 +74,11 @@ export function ReplayControls(props: ReplayControlsProps) {
       />
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{formatDate(props.replayStart)}</span>
-        <span>{progress.toFixed(1)}%</span>
-        <span>{formatDate(props.replayEnd)}</span>
+        <span>{formatDateShort(props.replayStart)}</span>
+        <span className="text-center">
+          {formatDateShort(props.cursor)} ({progress.toFixed(1)}%)
+        </span>
+        <span>{formatDateShort(props.replayEnd)}</span>
       </div>
     </div>
   )

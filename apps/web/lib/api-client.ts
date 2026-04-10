@@ -32,6 +32,19 @@ function buildUrl(path: string, params: Record<string, string | number | undefin
   return url.toString()
 }
 
+async function errorMessage(response: Response): Promise<string> {
+  try {
+    const payload = await response.json()
+    const message = payload?.error?.message
+    if (typeof message === "string" && message.length > 0) {
+      return message
+    }
+  } catch {
+    // ignore parse errors and fallback to status text
+  }
+  return `Request failed (${response.status})`
+}
+
 export async function fetchPositions(params: PositionParams): Promise<PositionListResponse> {
   const url = buildUrl("/positions", {
     wallet: params.wallet,
@@ -45,7 +58,7 @@ export async function fetchPositions(params: PositionParams): Promise<PositionLi
 
   const response = await fetch(url, { cache: "no-store" })
   if (!response.ok) {
-    throw new Error(`Failed to fetch positions (${response.status})`)
+    throw new Error(await errorMessage(response))
   }
 
   return response.json()
@@ -63,7 +76,7 @@ export async function fetchReplay(params: ReplayParams): Promise<ReplayResponse>
 
   const response = await fetch(url, { cache: "no-store" })
   if (!response.ok) {
-    throw new Error(`Failed to fetch replay (${response.status})`)
+    throw new Error(await errorMessage(response))
   }
 
   return response.json()

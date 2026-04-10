@@ -21,6 +21,8 @@ type ReplayViewProps = {
 
 export function ReplayView({ id, wallet, from, to }: ReplayViewProps) {
   const query = useReplayQuery({ id, wallet, from, to })
+  const errorMessage =
+    query.error instanceof Error ? query.error.message : "Failed to load replay."
 
   if (!id || !wallet || !from || !to) {
     return (
@@ -45,7 +47,7 @@ export function ReplayView({ id, wallet, from, to }: ReplayViewProps) {
   if (query.error || !query.data) {
     return (
       <PageShell>
-        <p className="text-sm text-red-600">Failed to load replay.</p>
+        <p className="text-sm text-red-600">{errorMessage}</p>
       </PageShell>
     )
   }
@@ -54,9 +56,15 @@ export function ReplayView({ id, wallet, from, to }: ReplayViewProps) {
 }
 
 function ReplayLoadedView({ replay }: { replay: NonNullable<ReturnType<typeof useReplayQuery>["data"]> }) {
+  const anchors = [
+    ...replay.candles.map((candle) => candle.timestamp),
+    ...replay.events.map((event) => event.timestamp)
+  ]
+
   const player = useReplayPlayer({
     start: replay.replayStart,
-    end: replay.replayEnd
+    end: replay.replayEnd,
+    anchors
   })
 
   return (
@@ -70,6 +78,8 @@ function ReplayLoadedView({ replay }: { replay: NonNullable<ReturnType<typeof us
         onPlay={player.play}
         onPause={player.pause}
         onReset={player.reset}
+        onStepBack={player.stepBack}
+        onStepForward={player.stepForward}
         onCursorChange={player.setCursor}
         onSpeedChange={player.setSpeed}
       />

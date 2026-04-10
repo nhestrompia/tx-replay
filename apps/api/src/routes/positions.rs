@@ -4,27 +4,33 @@ use axum::{
 };
 
 use crate::{
-    models::api::{PositionListResponse, PositionsQuery},
-    services::reconstruction::{reconstruct_positions, PositionFilter},
+    models::{
+        api::{PositionListResponse, PositionsQuery},
+        error::ApiError,
+    },
+    services::{
+        fill_cache::get_fills_with_cache,
+        reconstruction::{reconstruct_positions, PositionFilter},
+        validation::validate_positions_query,
+    },
     AppState,
 };
 
 pub async fn list_positions(
     State(state): State<AppState>,
     Query(query): Query<PositionsQuery>,
-) -> Result<Json<PositionListResponse>, (axum::http::StatusCode, String)> {
-    if query.from >= query.to {
-        return Err((
-            axum::http::StatusCode::BAD_REQUEST,
-            "from must be less than to".to_string(),
-        ));
-    }
+) -> Result<Json<PositionListResponse>, ApiError> {
+    validate_positions_query(&query)?;
 
-    let fills = state
-        .client
-        .fetch_fills(&query.wallet, query.from, query.to)
-        .await
-        .map_err(internal_error)?;
+    let fills = get_fills_with_cache(
+        &state.db,
+        &state.client,
+        &query.wallet,
+        query.from,
+        query.to,
+    )
+    .await
+    .map_err(|err| ApiError::internal(err.to_string()))?;
 
     let mut positions = reconstruct_positions(
         &query.wallet,
@@ -50,11 +56,4 @@ pub async fn list_positions(
         page,
         page_size,
     }))
-}
-
-fn internal_error(err: anyhow::Error) -> (axum::http::StatusCode, String) {
-    (
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-        err.to_string(),
-    )
 }

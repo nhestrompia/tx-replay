@@ -10,6 +10,9 @@ services:
     environment:
       - API_PORT=8080
       - HYPERLIQUID_BASE_URL=https://api.hyperliquid.xyz/info
+      - DATABASE_URL=sqlite://data/replayer.db
+    volumes:
+      - replay_data:/app/data
 
   web:
     build:
@@ -21,3 +24,6 @@ services:
       - NEXT_PUBLIC_API_BASE_URL=http://api:8080/v1
     depends_on:
       - api
+
+volumes:
+  replay_data:
