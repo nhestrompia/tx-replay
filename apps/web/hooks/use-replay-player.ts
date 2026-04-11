@@ -26,7 +26,7 @@ export function useReplayPlayer(input: {
   anchors?: number[]
 }) {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [speed, setSpeed] = useState(1)
+  const [speed, setSpeed] = useState(5)
   const [cursor, setCursor] = useState(input.start)
 
   const duration = useMemo(() => Math.max(1, input.end - input.start), [input.end, input.start])
@@ -61,7 +61,7 @@ export function useReplayPlayer(input: {
       lastTime = now
 
       setCursor((prev) => {
-        const next = prev + elapsed * speed * 20
+        const next = prev + elapsed * speed * 100
         if (next >= input.end) {
           setIsPlaying(false)
           return input.end

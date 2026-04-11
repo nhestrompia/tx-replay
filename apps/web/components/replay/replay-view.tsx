@@ -9,6 +9,7 @@ import { ReplayControls } from "@/components/replay/replay-controls"
 import { PositionSummary } from "@/components/replay/position-summary"
 import { PageShell } from "@/components/shared/page-shell"
 import { Card, CardContent } from "@/components/ui/card"
+import { useReplayPnl } from "@/hooks/use-replay-pnl"
 import { useReplayPlayer } from "@/hooks/use-replay-player"
 import { useReplayQuery } from "@/hooks/use-replay-query"
 
@@ -66,6 +67,13 @@ function ReplayLoadedView({ replay }: { replay: NonNullable<ReturnType<typeof us
     end: replay.replayEnd,
     anchors
   })
+  const replayPnl = useReplayPnl({
+    position: replay.position,
+    events: replay.events,
+    candles: replay.candles,
+    cursor: player.cursor
+  })
+  const chartPnl = replayPnl.status === "closed" ? replayPnl.finalRealizedPnl : replayPnl.replayPnl
 
   return (
     <PageShell className="space-y-4">
@@ -85,17 +93,22 @@ function ReplayLoadedView({ replay }: { replay: NonNullable<ReturnType<typeof us
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <ReplayChart
-          candles={replay.candles}
-          cursor={player.cursor}
-          replayStart={replay.replayStart}
-          replayEnd={replay.replayEnd}
-        />
+        <div className="space-y-4">
+          <ReplayChart
+            candles={replay.candles}
+            events={replay.events}
+            cursor={player.cursor}
+            replayStart={replay.replayStart}
+            replayEnd={replay.replayEnd}
+            pnl={chartPnl}
+            pnlStatus={replayPnl.status}
+          />
+          <EventList events={replay.events} cursor={player.cursor} />
+        </div>
 
         <div className="space-y-4">
-          <PositionSummary position={replay.position} />
+          <PositionSummary position={replay.position} replayPnl={replayPnl} />
           <FundingPanel points={replay.funding} cursor={player.cursor} />
-          <EventList events={replay.events} cursor={player.cursor} />
         </div>
       </div>
     </PageShell>
