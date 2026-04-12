@@ -2,6 +2,7 @@ use crate::{
     models::api::{Candle, Fill, Position, ReplayResponse},
     services::hyperliquid_client::HyperliquidClient,
 };
+use std::collections::BTreeMap;
 use tracing::warn;
 
 const INTERVALS: [(&str, i64); 11] = [
@@ -19,6 +20,7 @@ const INTERVALS: [(&str, i64); 11] = [
 ];
 const TARGET_MAX_CANDLES: i64 = 4_500;
 const FUNDING_CONTEXT_MS: i64 = 24 * 60 * 60 * 1000;
+const MIN_REPLAY_BUCKETS: i64 = 8;
 
 pub async fn build_replay(
     client: &HyperliquidClient,
@@ -27,12 +29,16 @@ pub async fn build_replay(
     post_ms: i64,
     interval: String,
 ) -> anyhow::Result<ReplayResponse> {
-    let replay_start = position.opened_at - pre_ms;
-    let replay_end = position.closed_at + post_ms;
+    let requested_bucket_ms = interval_ms(&interval).unwrap_or(60_000);
+    let requested_start = position.opened_at.saturating_sub(pre_ms.max(0));
+    let requested_end = position.closed_at.saturating_add(post_ms.max(0));
+    let (replay_start, replay_end) =
+        ensure_min_replay_window(requested_start, requested_end, requested_bucket_ms);
 
     let intervals = candidate_intervals(&interval, replay_start, replay_end);
     let mut last_error: Option<anyhow::Error> = None;
     let mut candles = Vec::new();
+    let mut selected_bucket_ms = requested_bucket_ms;
 
     for candidate in &intervals {
         match client
@@ -44,6 +50,7 @@ pub async fn build_replay(
                     continue;
                 }
                 candles = data;
+                selected_bucket_ms = interval_ms(candidate).unwrap_or(selected_bucket_ms);
                 break;
             }
             Err(err) => {
@@ -63,9 +70,10 @@ pub async fn build_replay(
             &position.fills,
             replay_start,
             replay_end,
-            interval_ms(&interval).unwrap_or(5 * 60_000),
+            selected_bucket_ms,
         );
     }
+    candles = densify_candles(candles, replay_start, replay_end, selected_bucket_ms);
 
     let mut funding = client
         .fetch_funding(
@@ -177,6 +185,89 @@ fn build_fill_fallback_candles(
     candles
 }
 
+fn densify_candles(
+    mut candles: Vec<Candle>,
+    replay_start: i64,
+    replay_end: i64,
+    bucket_ms: i64,
+) -> Vec<Candle> {
+    if candles.is_empty() || replay_start > replay_end || bucket_ms <= 0 {
+        return candles;
+    }
+
+    candles.sort_by_key(|candle| candle.timestamp);
+    candles.dedup_by_key(|candle| candle.timestamp);
+
+    let window_start = align_down(replay_start, bucket_ms);
+    let window_end = align_down(replay_end, bucket_ms);
+    if window_start > window_end {
+        return candles;
+    }
+
+    let seed_price = candles
+        .iter()
+        .rev()
+        .find(|c| c.timestamp <= window_start)
+        .map(|c| c.close)
+        .or_else(|| candles.first().map(|c| c.open))
+        .unwrap_or(0.0);
+    if !seed_price.is_finite() || seed_price <= 0.0 {
+        return candles;
+    }
+
+    let mut by_bucket = BTreeMap::new();
+    for candle in candles {
+        let bucket = align_down(candle.timestamp, bucket_ms);
+        if bucket < window_start || bucket > window_end {
+            continue;
+        }
+        by_bucket.insert(
+            bucket,
+            Candle {
+                timestamp: bucket,
+                ..candle
+            },
+        );
+    }
+
+    let mut out = Vec::new();
+    let mut previous_close = seed_price;
+    let mut ts = window_start;
+    while ts <= window_end {
+        if let Some(candle) = by_bucket.get(&ts) {
+            let mut current = candle.clone();
+            if !current.open.is_finite() || current.open <= 0.0 {
+                current.open = previous_close;
+            }
+            if !current.close.is_finite() || current.close <= 0.0 {
+                current.close = current.open;
+            }
+            if !current.high.is_finite() || current.high <= 0.0 {
+                current.high = current.open.max(current.close);
+            }
+            if !current.low.is_finite() || current.low <= 0.0 {
+                current.low = current.open.min(current.close);
+            }
+            current.high = current.high.max(current.open).max(current.close);
+            current.low = current.low.min(current.open).min(current.close);
+            previous_close = current.close;
+            out.push(current);
+        } else {
+            out.push(Candle {
+                timestamp: ts,
+                open: previous_close,
+                high: previous_close,
+                low: previous_close,
+                close: previous_close,
+                volume: 0.0,
+            });
+        }
+        ts += bucket_ms;
+    }
+
+    out
+}
+
 fn align_down(value: i64, step: i64) -> i64 {
     value - value.rem_euclid(step)
 }
@@ -209,4 +300,32 @@ fn interval_ms(interval: &str) -> Option<i64> {
     INTERVALS
         .iter()
         .find_map(|(label, ms)| if *label == interval { Some(*ms) } else { None })
+}
+
+fn ensure_min_replay_window(start: i64, end: i64, bucket_ms: i64) -> (i64, i64) {
+    if bucket_ms <= 0 {
+        return (start, end.max(start));
+    }
+
+    let safe_end = end.max(start);
+    let span = safe_end - start;
+    let min_span = bucket_ms.saturating_mul(MIN_REPLAY_BUCKETS);
+
+    if span >= min_span {
+        return (start, safe_end);
+    }
+
+    let deficit = min_span - span;
+    let pad_before = deficit / 2;
+    let pad_after = deficit - pad_before;
+
+    let mut expanded_start = start.saturating_sub(pad_before);
+    let mut expanded_end = safe_end.saturating_add(pad_after);
+    if expanded_start < 0 {
+        let shift = -expanded_start;
+        expanded_start = 0;
+        expanded_end = expanded_end.saturating_add(shift);
+    }
+
+    (expanded_start, expanded_end)
 }

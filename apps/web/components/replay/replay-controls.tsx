@@ -20,7 +20,7 @@ type ReplayControlsProps = {
   onSpeedChange: (value: number) => void
 }
 
-const SPEEDS = [5, 10]
+const SPEEDS = [3, 5, 10]
 
 export function ReplayControls(props: ReplayControlsProps) {
   const progress = ((props.cursor - props.replayStart) / (props.replayEnd - props.replayStart || 1)) * 100

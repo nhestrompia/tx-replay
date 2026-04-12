@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react"
 
-import { formatDateShort } from "@/lib/format"
+import { formatDateShort, formatFundingRatePercent } from "@/lib/format"
 import { FundingPoint } from "@/lib/types"
 
 type FundingPanelProps = {
@@ -90,7 +90,7 @@ export function FundingPanel({ points, cursor }: FundingPanelProps) {
     <div className="rounded-lg border bg-card p-3">
       <h3 className="mb-2 text-sm font-semibold">Funding Timeline</h3>
       <p className="mb-2 text-sm">
-        Current rate: <strong>{latest ? latest.rate.toFixed(6) : "N/A"}</strong>
+        Current rate: <strong>{latest ? formatFundingRatePercent(latest.rate, 4) : "N/A"}</strong>
       </p>
       <p className="mb-2 text-xs text-muted-foreground">
         {latest ? formatDateShort(latest.timestamp) : "No funding timestamp"}

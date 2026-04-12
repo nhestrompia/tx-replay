@@ -11,7 +11,7 @@ export function useReplayQuery(input: {
   to: number
 }) {
   return useQuery({
-    queryKey: ["replay", input, { preMs: 0, postMs: 0 }],
+    queryKey: ["replay", input, { preMs: 0, postMs: 0, interval: "1m" }],
     queryFn: () =>
       fetchReplay({
         id: input.id,
@@ -19,7 +19,8 @@ export function useReplayQuery(input: {
         from: input.from,
         to: input.to,
         preMs: 0,
-        postMs: 0
+        postMs: 0,
+        interval: "1m"
       }),
     enabled: Boolean(input.id && input.wallet && input.from && input.to),
     staleTime: 30_000

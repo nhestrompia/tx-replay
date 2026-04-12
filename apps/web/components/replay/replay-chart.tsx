@@ -6,7 +6,15 @@ import { Liveline } from "liveline"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { formatAxisTime, formatDateShort, formatDuration, formatNumber } from "@/lib/format"
+import {
+  formatAxisTime,
+  formatDateShort,
+  formatDuration,
+  formatPnlWithUnit,
+  formatPriceWithUnit,
+  formatSizeWithUnit,
+  quoteCurrencyFromPair
+} from "@/lib/format"
 import { Candle, ReplayEvent } from "@/lib/types"
 
 type ReplayChartProps = {
@@ -15,6 +23,7 @@ type ReplayChartProps = {
   cursor: number
   replayStart: number
   replayEnd: number
+  pair: string
   pnl: number
   pnlStatus: "pre_open" | "open" | "closed"
 }
@@ -34,6 +43,7 @@ type EventCluster = {
   label: string
   tone: "default" | "green" | "red"
   ts: number
+  price: number
 }
 
 function toLivelineCandle(candle: Candle, offsetSec: number) {
@@ -48,7 +58,7 @@ function toLivelineCandle(candle: Candle, offsetSec: number) {
 
 function inferCandleWidthSeconds(candles: Candle[]): number {
   if (candles.length < 2) {
-    return 300
+    return 60
   }
 
   let minDiffMs = Number.MAX_SAFE_INTEGER
@@ -60,7 +70,7 @@ function inferCandleWidthSeconds(candles: Candle[]): number {
   }
 
   if (!Number.isFinite(minDiffMs) || minDiffMs <= 0 || minDiffMs === Number.MAX_SAFE_INTEGER) {
-    return 300
+    return 60
   }
   return Math.max(1, Math.round(minDiffMs / 1000))
 }
@@ -134,42 +144,115 @@ function summarizeEventTypes(events: ReplayEvent[]): string {
     .join(" ")
 }
 
+function alignDown(value: number, step: number): number {
+  return value - (value % step)
+}
+
+function buildEventFallbackCandles(
+  events: ReplayEvent[],
+  replayStart: number,
+  replayEnd: number,
+  bucketMs = 60_000
+): Candle[] {
+  if (events.length === 0 || replayStart > replayEnd) {
+    return []
+  }
+
+  const sorted = [...events].sort((a, b) => a.timestamp - b.timestamp)
+  let index = 0
+  let price = sorted[0]?.fill_price ?? 0
+  if (!Number.isFinite(price) || price <= 0) {
+    return []
+  }
+
+  const out: Candle[] = []
+  let bucketStart = alignDown(replayStart, bucketMs)
+  const bucketEnd = alignDown(replayEnd, bucketMs)
+
+  while (bucketStart <= bucketEnd) {
+    const nextBucket = bucketStart + bucketMs
+    const open = price
+    let high = price
+    let low = price
+    let close = price
+    let volume = 0
+
+    while (index < sorted.length && sorted[index].timestamp < nextBucket) {
+      const event = sorted[index]
+      if (event.timestamp >= bucketStart) {
+        high = Math.max(high, event.fill_price)
+        low = Math.min(low, event.fill_price)
+        close = event.fill_price
+        volume += event.fill_size
+      }
+      index += 1
+    }
+
+    out.push({
+      timestamp: bucketStart,
+      open,
+      high,
+      low,
+      close,
+      volume
+    })
+    price = close
+    bucketStart = nextBucket
+  }
+
+  return out
+}
+
 export function ReplayChart({
   candles,
   events,
   cursor,
   replayStart,
   replayEnd,
+  pair,
   pnl,
   pnlStatus
 }: ReplayChartProps) {
   const [zoomPercent, setZoomPercent] = useState(100)
   const [hoveredClusterKey, setHoveredClusterKey] = useState<string | null>(null)
-  const hideHoverTimer = useRef<number | null>(null)
   const chartNowSecRef = useRef<number>(Math.floor(Date.now() / 1000))
 
-  const ordered = useMemo(
-    () => [...candles].sort((a, b) => a.timestamp - b.timestamp),
-    [candles]
-  )
   const orderedEvents = useMemo(
     () => [...events].sort((a, b) => a.timestamp - b.timestamp),
     [events]
   )
+  const ordered = useMemo(() => {
+    const sorted = [...candles]
+      .filter(
+        (candle) =>
+          Number.isFinite(candle.open) &&
+          Number.isFinite(candle.high) &&
+          Number.isFinite(candle.low) &&
+          Number.isFinite(candle.close) &&
+          candle.high > 0 &&
+          candle.low > 0
+      )
+      .sort((a, b) => a.timestamp - b.timestamp)
 
-  if (!ordered.length) {
-    return (
-      <div className="relative h-[420px] w-full overflow-hidden rounded-lg border bg-white">
-        <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-          No market candle data returned for this replay window.
-        </div>
-      </div>
-    )
-  }
+    if (sorted.length > 0) {
+      return sorted
+    }
 
+    return buildEventFallbackCandles(orderedEvents, replayStart, replayEnd)
+  }, [candles, orderedEvents, replayStart, replayEnd])
+
+  const hasCandles = ordered.length > 0
   const latestClose = ordered[ordered.length - 1]?.close ?? 0
-  const fullWindowSeconds = Math.max(60, Math.ceil((replayEnd - replayStart) / 1000))
   const candleWidth = inferCandleWidthSeconds(ordered)
+  const replayWindowSeconds = Math.max(60, Math.ceil((replayEnd - replayStart) / 1000))
+  const candleWindowSeconds = ordered.length > 1
+    ? Math.max(
+        candleWidth,
+        Math.ceil((ordered[ordered.length - 1].timestamp - ordered[0].timestamp) / 1000) +
+        candleWidth
+      )
+    : Math.max(60, candleWidth * 2)
+  const fullWindowSeconds = Math.max(replayWindowSeconds, candleWindowSeconds)
   const minZoomWindowSeconds = Math.max(60, candleWidth * 4)
   const isZoomAllowed = (percent: number) =>
     percent === 100 || fullWindowSeconds * (percent / 100) >= minZoomWindowSeconds
@@ -213,13 +296,14 @@ export function ReplayChart({
   const activityLabel = orderedEvents.length > 1
     ? formatDuration(orderedEvents[orderedEvents.length - 1].timestamp - orderedEvents[0].timestamp)
     : "0m"
+  const quote = quoteCurrencyFromPair(pair)
   const pnlToneClass =
     pnlStatus === "pre_open"
       ? "text-muted-foreground"
       : pnl >= 0
         ? "text-emerald-700"
         : "text-rose-700"
-  const pnlText = pnlStatus === "pre_open" ? "--" : formatNumber(pnl, 3)
+  const pnlText = pnlStatus === "pre_open" ? "--" : formatPnlWithUnit(pnl, quote, 3)
 
   const occurredEvents = useMemo(
     () => orderedEvents.filter((event) => event.timestamp <= cursor),
@@ -252,50 +336,56 @@ export function ReplayChart({
               ? eventShortLabel(clusterEvents[0].event_type)
               : String(clusterEvents.length),
           tone: clusterTone(clusterEvents),
-          ts
+          ts,
+          price:
+            clusterEvents.reduce((acc, event) => acc + event.fill_price, 0) /
+            Math.max(1, clusterEvents.length)
         }
       })
   }, [occurredEvents, replayStart, clusterBucketMs])
 
   const visibleClusters = useMemo(() => {
-    const rightEdgeSec = replayEndSec + timeOffsetSec
+    if (!hasCandles || chartCandles.length === 0) {
+      return []
+    }
+
+    const rightEdgeSec = chartCandles[chartCandles.length - 1].time
     const leftEdgeSec = rightEdgeSec - chartWindowSeconds
+    const visibleCandles = chartCandles.filter((candle) => candle.time >= leftEdgeSec && candle.time <= rightEdgeSec)
+    const scope = visibleCandles.length > 0 ? visibleCandles : chartCandles
+    const scopeTimes = scope.map((candle) => candle.time).sort((a, b) => a - b)
+    if (scopeTimes.length === 0) {
+      return []
+    }
+    const minPrice = Math.min(...scope.map((candle) => candle.low))
+    const maxPrice = Math.max(...scope.map((candle) => candle.high))
+    const priceSpan = Math.max(1e-9, maxPrice - minPrice)
     const laneByXBucket = new Map<number, number>()
+    const chartSpan = Math.max(1, rightEdgeSec - leftEdgeSec)
 
     return clusters
       .map((cluster) => {
         const shiftedTsSec = Math.floor(cluster.ts / 1000) + timeOffsetSec
-        const x = (shiftedTsSec - leftEdgeSec) / Math.max(1, chartWindowSeconds)
-        return { ...cluster, x }
+        const xRaw = (shiftedTsSec - leftEdgeSec) / chartSpan
+        if (xRaw < 0 || xRaw > 1) {
+          return null
+        }
+        const nearestCandleTime = scopeTimes.reduce((best, candidate) => {
+          return Math.abs(candidate - shiftedTsSec) < Math.abs(best - shiftedTsSec) ? candidate : best
+        }, scopeTimes[0])
+        const x = (nearestCandleTime - leftEdgeSec) / chartSpan
+        const yValue = (cluster.price - minPrice) / priceSpan
+        const y = 1 - Math.max(0, Math.min(1, yValue))
+        return { ...cluster, x, y }
       })
-      .filter((cluster) => cluster.x >= 0 && cluster.x <= 1)
+      .filter((cluster): cluster is EventCluster & { x: number; y: number } => cluster !== null && cluster.x >= 0 && cluster.x <= 1)
       .map((cluster) => {
         const xBucket = Math.round(cluster.x * 180)
         const lane = laneByXBucket.get(xBucket) ?? 0
         laneByXBucket.set(xBucket, lane + 1)
         return { ...cluster, lane }
       })
-  }, [clusters, replayEndSec, chartWindowSeconds, timeOffsetSec])
-
-  const hoveredCluster =
-    hoveredClusterKey === null ? null : (clusters.find((cluster) => cluster.key === hoveredClusterKey) ?? null)
-
-  const clearHoverLater = () => {
-    if (hideHoverTimer.current !== null) {
-      window.clearTimeout(hideHoverTimer.current)
-    }
-    hideHoverTimer.current = window.setTimeout(() => {
-      setHoveredClusterKey(null)
-      hideHoverTimer.current = null
-    }, 180)
-  }
-
-  const keepHoverOpen = () => {
-    if (hideHoverTimer.current !== null) {
-      window.clearTimeout(hideHoverTimer.current)
-      hideHoverTimer.current = null
-    }
-  }
+  }, [clusters, chartWindowSeconds, timeOffsetSec, chartCandles, hasCandles])
 
   return (
     <div
@@ -307,6 +397,7 @@ export function ReplayChart({
         <p className="text-[10px] font-normal text-muted-foreground/80">
           Window {windowLabel} · Active {activityLabel}
         </p>
+        <p className="text-[10px] font-normal text-muted-foreground/80">Price ({quote})</p>
       </div>
       <div className="absolute left-1/2 top-3 z-30 -translate-x-1/2 text-xs font-semibold">
         <span className={pnlToneClass}>
@@ -328,93 +419,100 @@ export function ReplayChart({
         ))}
       </div>
 
-      <div className="absolute inset-0 p-2">
-        <Liveline
-          data={lineData}
-          value={latestClose}
-          mode="candle"
-          candles={chartCandles}
-          candleWidth={candleWidth}
-          window={chartWindowSeconds}
-          theme="light"
-          color="#1985A1"
-          grid
-          scrub={false}
-          pulse={false}
-          lineMode={false}
-          formatTime={formatTime}
-          padding={PLOT_PADDING}
-        />
-      </div>
+      {hasCandles ? (
+        <>
+          <div className="absolute inset-0 p-2">
+            <Liveline
+              data={lineData}
+              value={latestClose}
+              mode="candle"
+              candles={chartCandles}
+              candleWidth={candleWidth}
+              window={chartWindowSeconds}
+              theme="light"
+              color="#1985A1"
+              grid
+              scrub={false}
+              pulse={false}
+              lineMode={false}
+              formatTime={formatTime}
+              padding={PLOT_PADDING}
+            />
+          </div>
 
-      <div
-        className="pointer-events-none absolute inset-2 bg-white/55"
-        style={{
-          left: `calc(${revealLeftPercent} + 8px)`,
-          right: `${PLOT_PADDING.right + 8}px`
-        }}
-      />
+          <div
+            className="pointer-events-none absolute inset-2 bg-white/55"
+            style={{
+              left: `calc(${revealLeftPercent} + 8px)`,
+              right: `${PLOT_PADDING.right + 8}px`
+            }}
+          />
 
-      <div className="absolute inset-2 z-30 pointer-events-none">
-        <div
-          className="absolute"
-          style={{
-            left: `${PLOT_PADDING.left}px`,
-            right: `${PLOT_PADDING.right}px`,
-            bottom: `${PLOT_PADDING.bottom + 2}px`,
-            height: "1px"
-          }}
-        >
-          {visibleClusters.map((cluster) => (
+          <div className="absolute inset-2 z-30 pointer-events-none">
             <div
-              key={cluster.key}
-              className="absolute pointer-events-auto"
+              className="absolute"
               style={{
-                left: `${(cluster.x * 100).toFixed(4)}%`,
-                bottom: `${cluster.lane * 18}px`,
-                transform: "translateX(-50%)"
+                left: `${PLOT_PADDING.left}px`,
+                right: `${PLOT_PADDING.right}px`,
+                top: `${PLOT_PADDING.top}px`,
+                bottom: `${PLOT_PADDING.bottom}px`
               }}
-              onMouseEnter={() => {
-                keepHoverOpen()
-                setHoveredClusterKey(cluster.key)
-              }}
-              onMouseLeave={clearHoverLater}
             >
-              <Badge tone={cluster.tone}>{cluster.label}</Badge>
+              {visibleClusters.map((cluster) => (
+                <div
+                  key={cluster.key}
+                  className="absolute pointer-events-auto"
+                  style={{
+                    left: `${(cluster.x * 100).toFixed(4)}%`,
+                    top: `${(cluster.y * 100).toFixed(4)}%`,
+                    transform: `translate(-50%, calc(-50% - ${cluster.lane * 14}px))`
+                  }}
+                  onMouseEnter={() => setHoveredClusterKey(cluster.key)}
+                  onMouseLeave={() => setHoveredClusterKey(null)}
+                >
+                  <Badge tone={cluster.tone}>{cluster.label}</Badge>
+                  {hoveredClusterKey === cluster.key ? (
+                    <div
+                      className="absolute z-40 w-[280px]"
+                      style={
+                        cluster.x > 0.66
+                          ? { right: "calc(100% + 8px)", top: "50%", transform: "translateY(-50%)" }
+                          : { left: "calc(100% + 8px)", top: "50%", transform: "translateY(-50%)" }
+                      }
+                    >
+                      <Card className="bg-white/95 shadow-sm">
+                        <CardContent className="space-y-1 p-3 text-xs">
+                          <p className="font-semibold">
+                            {cluster.events.length} event{cluster.events.length > 1 ? "s" : ""}
+                          </p>
+                          <p className="text-muted-foreground">{formatDateShort(cluster.ts)}</p>
+                          <p>{summarizeEventTypes(cluster.events)}</p>
+                          <div
+                            className="max-h-32 space-y-1 overflow-auto pr-1"
+                            onWheel={(event) => {
+                              event.stopPropagation()
+                            }}
+                          >
+                            {cluster.events.map((event, index) => (
+                              <p key={`${event.timestamp}-${index}`}>
+                                {eventLabel(event.event_type)} · {formatSizeWithUnit(event.fill_size, pair, 4)} @ {formatPriceWithUnit(event.fill_price, quote, 2)}
+                              </p>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+        </>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center p-6 text-sm text-muted-foreground">
+          No market candle data returned for this replay window.
         </div>
-      </div>
-
-      {hoveredCluster ? (
-        <div
-          className="absolute right-3 top-10 z-40"
-          onMouseEnter={keepHoverOpen}
-          onMouseLeave={clearHoverLater}
-        >
-          <Card className="w-[280px] bg-white/95 shadow-sm">
-            <CardContent className="space-y-1 p-3 text-xs">
-              <p className="font-semibold">
-                {hoveredCluster.events.length} event{hoveredCluster.events.length > 1 ? "s" : ""}
-              </p>
-              <p className="text-muted-foreground">{formatDateShort(hoveredCluster.ts)}</p>
-              <p>{summarizeEventTypes(hoveredCluster.events)}</p>
-              <div
-                className="max-h-32 space-y-1 overflow-auto pr-1"
-                onWheel={(event) => {
-                  event.stopPropagation()
-                }}
-              >
-                {hoveredCluster.events.map((event, index) => (
-                  <p key={`${event.timestamp}-${index}`}>
-                    {eventLabel(event.event_type)} · {formatNumber(event.fill_size, 4)} @ {formatNumber(event.fill_price, 2)}
-                  </p>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
+      )}
     </div>
   )
 }

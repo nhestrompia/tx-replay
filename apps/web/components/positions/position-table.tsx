@@ -2,7 +2,7 @@ import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
 import { Table, Tbody, Td, Th, Thead } from "@/components/ui/table"
-import { formatDateShort, formatDuration, formatNumber } from "@/lib/format"
+import { formatDateShort, formatDuration, formatPnlWithUnit, formatSizeWithUnit, quoteCurrencyFromPair } from "@/lib/format"
 import { Position } from "@/lib/types"
 
 type PositionTableProps = {
@@ -37,6 +37,7 @@ export function PositionTable({ wallet, from, to, positions }: PositionTableProp
           {positions.map((position) => {
             const tone = position.realized_pnl >= 0 ? "green" : "red"
             const duration = position.closed_at - position.opened_at
+            const quote = quoteCurrencyFromPair(position.pair)
 
             return (
               <tr key={position.id}>
@@ -48,9 +49,9 @@ export function PositionTable({ wallet, from, to, positions }: PositionTableProp
                 <Td>{formatDateShort(position.closed_at)}</Td>
                 <Td>{formatDuration(duration)}</Td>
                 <Td>
-                  <Badge tone={tone}>{formatNumber(position.realized_pnl, 3)}</Badge>
+                  <Badge tone={tone}>{formatPnlWithUnit(position.realized_pnl, quote, 3)}</Badge>
                 </Td>
-                <Td>{formatNumber(position.max_size, 4)}</Td>
+                <Td>{formatSizeWithUnit(position.max_size, position.pair, 4)}</Td>
                 <Td>{position.fills.length}</Td>
                 <Td>
                   <Link

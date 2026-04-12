@@ -1,6 +1,12 @@
 import { Badge } from "@/components/ui/badge"
 import { ReplayPnlSnapshot } from "@/hooks/use-replay-pnl"
-import { formatDuration, formatNumber } from "@/lib/format"
+import {
+  formatDuration,
+  formatPnlWithUnit,
+  formatPriceWithUnit,
+  formatSizeWithUnit,
+  quoteCurrencyFromPair
+} from "@/lib/format"
 import { Position } from "@/lib/types"
 
 type PositionSummaryProps = {
@@ -21,6 +27,7 @@ function pnlTone(value: number): "green" | "red" | "default" {
 export function PositionSummary({ position, replayPnl }: PositionSummaryProps) {
   const pnlValue = replayPnl.status === "closed" ? replayPnl.finalRealizedPnl : replayPnl.replayPnl
   const pnlLabel = replayPnl.status === "closed" ? "PnL (Final)" : "PnL (Live)"
+  const quote = quoteCurrencyFromPair(position.pair)
   const statusTone = replayPnl.status === "open" ? "green" : "default"
   const statusLabel =
     replayPnl.status === "pre_open"
@@ -51,26 +58,26 @@ export function PositionSummary({ position, replayPnl }: PositionSummaryProps) {
 
         <span className="text-muted-foreground">{pnlLabel}</span>
         <span>
-          <Badge tone={pnlTone(pnlValue)}>{formatNumber(pnlValue, 3)}</Badge>
+          <Badge tone={pnlTone(pnlValue)}>{formatPnlWithUnit(pnlValue, quote, 3)}</Badge>
         </span>
 
         <span className="text-muted-foreground">Mark Price</span>
-        <span>{replayPnl.markPrice === null ? "N/A" : formatNumber(replayPnl.markPrice, 2)}</span>
+        <span>{replayPnl.markPrice === null ? "N/A" : formatPriceWithUnit(replayPnl.markPrice, quote, 2)}</span>
 
         <span className="text-muted-foreground">Open Size</span>
-        <span>{formatNumber(replayPnl.openSize, 4)}</span>
+        <span>{formatSizeWithUnit(replayPnl.openSize, position.pair, 4)}</span>
 
         <span className="text-muted-foreground">Unrealized</span>
-        <span>{replayPnl.status === "open" ? formatNumber(replayPnl.unrealizedPnl, 3) : "-"}</span>
+        <span>{replayPnl.status === "open" ? formatPnlWithUnit(replayPnl.unrealizedPnl, quote, 3) : "-"}</span>
 
         <span className="text-muted-foreground">Avg Entry</span>
-        <span>{formatNumber(position.avg_entry, 4)}</span>
+        <span>{formatPriceWithUnit(position.avg_entry, quote, 4)}</span>
 
         <span className="text-muted-foreground">Avg Exit</span>
-        <span>{formatNumber(position.avg_exit, 4)}</span>
+        <span>{formatPriceWithUnit(position.avg_exit, quote, 4)}</span>
 
         <span className="text-muted-foreground">Max Size</span>
-        <span>{formatNumber(position.max_size, 4)}</span>
+        <span>{formatSizeWithUnit(position.max_size, position.pair, 4)}</span>
       </div>
     </div>
   )
