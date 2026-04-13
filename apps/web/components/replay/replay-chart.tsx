@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Liveline } from "liveline"
+import { CandlestickChart, ChartLine } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -214,8 +215,11 @@ export function ReplayChart({
   pnlStatus
 }: ReplayChartProps) {
   const [zoomPercent, setZoomPercent] = useState(100)
+  const [chartStyle, setChartStyle] = useState<"line" | "candles">("line")
   const [hoveredClusterKey, setHoveredClusterKey] = useState<string | null>(null)
+  const [hoverPoint, setHoverPoint] = useState<{ time: number; value: number } | null>(null)
   const chartNowSecRef = useRef<number>(Math.floor(Date.now() / 1000))
+  const closeTooltipTimerRef = useRef<number | null>(null)
 
   const orderedEvents = useMemo(
     () => [...events].sort((a, b) => a.timestamp - b.timestamp),
@@ -267,6 +271,9 @@ export function ReplayChart({
   const chartWindowSeconds = zoomPercent === 100
     ? fullWindowSeconds
     : Math.min(fullWindowSeconds, Math.max(minZoomWindowSeconds, requestedWindow))
+  const renderWindowSeconds = chartStyle === "candles"
+    ? chartWindowSeconds + (candleWidth * 2)
+    : chartWindowSeconds
 
   const tfLabel = timeframeLabel(candleWidth)
   const includeDateInAxis = chartWindowSeconds >= 24 * 60 * 60
@@ -350,7 +357,7 @@ export function ReplayChart({
     }
 
     const rightEdgeSec = chartCandles[chartCandles.length - 1].time
-    const leftEdgeSec = rightEdgeSec - chartWindowSeconds
+    const leftEdgeSec = rightEdgeSec - renderWindowSeconds
     const visibleCandles = chartCandles.filter((candle) => candle.time >= leftEdgeSec && candle.time <= rightEdgeSec)
     const scope = visibleCandles.length > 0 ? visibleCandles : chartCandles
     const scopeTimes = scope.map((candle) => candle.time).sort((a, b) => a - b)
@@ -375,8 +382,14 @@ export function ReplayChart({
         }, scopeTimes[0])
         const x = (nearestCandleTime - leftEdgeSec) / chartSpan
         const yValue = (cluster.price - minPrice) / priceSpan
-        const y = 1 - Math.max(0, Math.min(1, yValue))
-        return { ...cluster, x, y }
+        const y = chartStyle === "line"
+          ? 0.9
+          : 1 - Math.max(0, Math.min(1, yValue))
+        return {
+          ...cluster,
+          x: Math.max(chartStyle === "line" ? 0.03 : 0.04, Math.min(chartStyle === "line" ? 0.96 : 0.94, x)),
+          y
+        }
       })
       .filter((cluster): cluster is EventCluster & { x: number; y: number } => cluster !== null && cluster.x >= 0 && cluster.x <= 1)
       .map((cluster) => {
@@ -385,26 +398,84 @@ export function ReplayChart({
         laneByXBucket.set(xBucket, lane + 1)
         return { ...cluster, lane }
       })
-  }, [clusters, chartWindowSeconds, timeOffsetSec, chartCandles, hasCandles])
+  }, [clusters, renderWindowSeconds, timeOffsetSec, chartCandles, hasCandles, chartStyle])
+
+  const hoveredCluster = hoveredClusterKey
+    ? (visibleClusters.find((cluster) => cluster.key === hoveredClusterKey) ?? null)
+    : null
+
+  const clearTooltipCloseTimer = () => {
+    if (closeTooltipTimerRef.current !== null) {
+      window.clearTimeout(closeTooltipTimerRef.current)
+      closeTooltipTimerRef.current = null
+    }
+  }
+
+  const scheduleTooltipClose = () => {
+    clearTooltipCloseTimer()
+    closeTooltipTimerRef.current = window.setTimeout(() => {
+      setHoveredClusterKey(null)
+      closeTooltipTimerRef.current = null
+    }, 140)
+  }
+
+  useEffect(() => {
+    return () => {
+      clearTooltipCloseTimer()
+    }
+  }, [])
 
   return (
     <div
       className="relative h-[420px] w-full overflow-hidden rounded-lg border bg-white"
-      onMouseLeave={() => setHoveredClusterKey(null)}
+      onMouseLeave={() => {
+        clearTooltipCloseTimer()
+        setHoveredClusterKey(null)
+        setHoverPoint(null)
+      }}
     >
       <div className="absolute left-3 top-3 z-30 text-xs font-medium text-muted-foreground">
-        <p>{tfLabel}</p>
+        <div className="mb-1 flex items-center gap-2">
+          <span>{tfLabel}</span>
+        </div>
         <p className="text-[10px] font-normal text-muted-foreground/80">
           Window {windowLabel} · Active {activityLabel}
         </p>
         <p className="text-[10px] font-normal text-muted-foreground/80">Price ({quote})</p>
+        {chartStyle === "line" && hoverPoint ? (
+          <p className="text-[10px] font-normal text-foreground/90">
+            {formatAxisTime(hoverPoint.time - timeOffsetSec, includeDateInAxis)} · {formatPriceWithUnit(hoverPoint.value, quote, 2)}
+          </p>
+        ) : null}
       </div>
       <div className="absolute left-1/2 top-3 z-30 -translate-x-1/2 text-xs font-semibold">
         <span className={pnlToneClass}>
           PnL {pnlStatus === "closed" ? "(Final)" : "(Live)"} {pnlText}
         </span>
       </div>
-      <div className="absolute right-3 top-3 z-30 flex items-center gap-1">
+      <div className="absolute right-3 top-3 z-40 flex items-center gap-2">
+        <div className="inline-flex items-center gap-1 rounded-md border bg-white/95 p-0.5 shadow-sm">
+          <Button
+            size="sm"
+            variant={chartStyle === "line" ? "default" : "ghost"}
+            onClick={() => setChartStyle("line")}
+            className="h-6 w-6 p-0"
+            title="Line chart"
+            aria-label="Line chart"
+          >
+            <ChartLine className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant={chartStyle === "candles" ? "default" : "ghost"}
+            onClick={() => setChartStyle("candles")}
+            className="h-6 w-6 p-0"
+            title="Candlestick chart"
+            aria-label="Candlestick chart"
+          >
+            <CandlestickChart className="h-3.5 w-3.5" />
+          </Button>
+        </div>
         {ZOOM_PERCENTS.map((percent) => (
           <Button
             key={percent}
@@ -425,17 +496,25 @@ export function ReplayChart({
             <Liveline
               data={lineData}
               value={latestClose}
-              mode="candle"
-              candles={chartCandles}
-              candleWidth={candleWidth}
-              window={chartWindowSeconds}
+              mode={chartStyle === "line" ? "line" : "candle"}
+              candles={chartStyle === "candles" ? chartCandles : undefined}
+              candleWidth={chartStyle === "candles" ? candleWidth : undefined}
+              window={renderWindowSeconds}
               theme="light"
               color="#1985A1"
               grid
-              scrub={false}
+              scrub={chartStyle === "line"}
+              cursor={chartStyle === "line" ? "crosshair" : "default"}
               pulse={false}
               lineMode={false}
               formatTime={formatTime}
+              onHover={(point) => {
+                if (!point) {
+                  setHoverPoint(null)
+                  return
+                }
+                setHoverPoint({ time: point.time, value: point.value })
+              }}
               padding={PLOT_PADDING}
             />
           </div>
@@ -448,7 +527,7 @@ export function ReplayChart({
             }}
           />
 
-          <div className="absolute inset-2 z-30 pointer-events-none">
+          <div className="absolute inset-2 z-40 pointer-events-none">
             <div
               className="absolute"
               style={{
@@ -465,48 +544,80 @@ export function ReplayChart({
                   style={{
                     left: `${(cluster.x * 100).toFixed(4)}%`,
                     top: `${(cluster.y * 100).toFixed(4)}%`,
-                    transform: `translate(-50%, calc(-50% - ${cluster.lane * 14}px))`
+                    transform: chartStyle === "line"
+                      ? `translate(-50%, calc(-50% - ${cluster.lane * 16}px))`
+                      : `translate(-50%, calc(-50% - ${cluster.lane * 14}px))`
                   }}
-                  onMouseEnter={() => setHoveredClusterKey(cluster.key)}
-                  onMouseLeave={() => setHoveredClusterKey(null)}
+                  onMouseEnter={() => {
+                    clearTooltipCloseTimer()
+                    setHoveredClusterKey(cluster.key)
+                  }}
+                  onMouseLeave={scheduleTooltipClose}
                 >
-                  <Badge tone={cluster.tone}>{cluster.label}</Badge>
-                  {hoveredClusterKey === cluster.key ? (
-                    <div
-                      className="absolute z-40 w-[280px]"
-                      style={
-                        cluster.x > 0.66
-                          ? { right: "calc(100% + 8px)", top: "50%", transform: "translateY(-50%)" }
-                          : { left: "calc(100% + 8px)", top: "50%", transform: "translateY(-50%)" }
+                  {chartStyle === "line" ? (
+                    <span
+                      className={
+                        cluster.tone === "red"
+                          ? "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-100 px-1 text-[11px] font-semibold text-rose-800"
+                          : cluster.tone === "green"
+                            ? "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-100 px-1 text-[11px] font-semibold text-emerald-800"
+                            : "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-200 px-1 text-[11px] font-semibold text-slate-700"
                       }
                     >
-                      <Card className="bg-white/95 shadow-sm">
-                        <CardContent className="space-y-1 p-3 text-xs">
-                          <p className="font-semibold">
-                            {cluster.events.length} event{cluster.events.length > 1 ? "s" : ""}
-                          </p>
-                          <p className="text-muted-foreground">{formatDateShort(cluster.ts)}</p>
-                          <p>{summarizeEventTypes(cluster.events)}</p>
-                          <div
-                            className="max-h-32 space-y-1 overflow-auto pr-1"
-                            onWheel={(event) => {
-                              event.stopPropagation()
-                            }}
-                          >
-                            {cluster.events.map((event, index) => (
-                              <p key={`${event.timestamp}-${index}`}>
-                                {eventLabel(event.event_type)} · {formatSizeWithUnit(event.fill_size, pair, 4)} @ {formatPriceWithUnit(event.fill_price, quote, 2)}
-                              </p>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  ) : null}
+                      {cluster.label}
+                    </span>
+                  ) : (
+                    <Badge tone={cluster.tone}>{cluster.label}</Badge>
+                  )}
                 </div>
               ))}
             </div>
           </div>
+
+          {hoveredCluster ? (
+            <div
+              className="absolute z-50 w-[320px] pointer-events-auto"
+              style={
+                hoveredCluster.x > 0.7
+                  ? {
+                      left: `${Math.max(6, hoveredCluster.x * 100 - 36)}%`,
+                      top: `${Math.max(14, Math.min(86, hoveredCluster.y * 100 - 4))}%`,
+                      transform: "translateY(-50%)"
+                    }
+                  : {
+                      left: `${Math.max(6, Math.min(74, hoveredCluster.x * 100 + 3))}%`,
+                      top: `${Math.max(14, Math.min(86, hoveredCluster.y * 100 - 4))}%`,
+                      transform: "translateY(-50%)"
+                    }
+              }
+              onMouseEnter={clearTooltipCloseTimer}
+              onMouseLeave={scheduleTooltipClose}
+            >
+              <Card className="bg-white/95 shadow-md backdrop-blur-sm">
+                <CardContent className="space-y-2 p-3 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">
+                      {hoveredCluster.events.length} event{hoveredCluster.events.length > 1 ? "s" : ""}
+                    </p>
+                    <Badge tone={hoveredCluster.tone}>{summarizeEventTypes(hoveredCluster.events)}</Badge>
+                  </div>
+                  <p className="text-muted-foreground">{formatDateShort(hoveredCluster.ts)}</p>
+                  <div
+                    className="max-h-40 space-y-1 overflow-y-auto overscroll-contain pr-1"
+                    onWheel={(event) => {
+                      event.stopPropagation()
+                    }}
+                  >
+                    {hoveredCluster.events.map((event, index) => (
+                      <p key={`${event.timestamp}-${index}`}>
+                        {eventLabel(event.event_type)} · {formatSizeWithUnit(event.fill_size, pair, 4)} @ {formatPriceWithUnit(event.fill_price, quote, 2)}
+                      </p>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
         </>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center p-6 text-sm text-muted-foreground">

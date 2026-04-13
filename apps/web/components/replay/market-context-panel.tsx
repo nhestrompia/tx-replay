@@ -163,14 +163,14 @@ export function MarketContextPanel({
 
   return (
     <div className="rounded-lg border bg-card p-3">
-      <h3 className="mb-2 text-sm font-semibold">Market Context (Free)</h3>
+      <h3 className="mb-2 text-sm font-semibold">Market Context</h3>
 
       <div className="space-y-1 text-xs">
         <p>
-          Replay window: <span className="text-muted-foreground">{formatDateShort(replayStart)} → {formatDateShort(replayEnd)}</span>
+          Window: <span className="text-muted-foreground">{formatDateShort(activeStart)} → {formatDateShort(activeEnd)}</span>
         </p>
         <p>
-          Position active: <span className="text-muted-foreground">{formatDateShort(activeStart)} → {formatDateShort(activeEnd)}</span>
+          Replay: <span className="text-muted-foreground">{formatDateShort(replayStart)} → {formatDateShort(replayEnd)}</span>
         </p>
         <p>
           Price move:{" "}
@@ -200,14 +200,14 @@ export function MarketContextPanel({
       <div className="mt-3 grid grid-cols-1 gap-2">
         <a href={xSearchUrl} target="_blank" rel="noreferrer">
           <span className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full justify-between")}>
-            X Search ({base}, date-bounded)
+            Search on X
             <ExternalLink className="h-3.5 w-3.5" />
           </span>
         </a>
       </div>
 
       <p className="mt-3 text-[11px] text-muted-foreground">
-        Historical order-book change, liquidation prints, and reliable OI deltas require an archived external feed.
+        Order-book history, liquidation timeline, and OI deltas can be added with an archived market-data feed.
       </p>
     </div>
   )
