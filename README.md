@@ -7,8 +7,6 @@ Open-source wallet-to-replay engine for Hyperliquid positions.
 - Frontend: Next.js, React Query, Tailwind, shadcn-style UI, Liveline
 - Backend: Rust (Axum), deterministic position reconstruction
 - Storage: SQLite cache for fills/day-sync state
-- License: MIT
-- Open-source: no paid dependencies required
 
 ## Monorepo Layout
 
@@ -59,15 +57,3 @@ All non-2xx API responses return:
   }
 }
 ```
-
-## Notes
-
-- Date range is first-class and required for fast wallet lookup on large histories.
-- Position reconstruction is deterministic and based on fill sequence.
-- Hyperliquid API limits/history windows still apply.
-- Frontend fetch layer uses React Query globally for caching and deduping.
-- UI is split into small modular files (one component per file).
-- If a query range starts mid-position, boundary close-only fills are ignored to avoid phantom positions.
-- Backend ingestion is overflow-safe: capped windows are split recursively and then cursor-paginated.
-- Replays include play/pause, speed, scrubber, and step forward/back controls.
-- Funding is shown as a timeline chart aligned to replay cursor.
