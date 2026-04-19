@@ -87,16 +87,16 @@ export function FundingPanel({ points, cursor }: FundingPanelProps) {
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <h3 className="mb-2 text-sm font-semibold">Funding Timeline</h3>
-      <p className="mb-2 text-sm">
+    <div className="rounded-2xl border border-border/80 bg-card/90 p-4">
+      <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">Funding Timeline</h3>
+      <p className="mb-1 text-sm">
         Current rate: <strong>{latest ? formatFundingRatePercent(latest.rate, 4) : "N/A"}</strong>
       </p>
       <p className="mb-2 text-xs text-muted-foreground">
         {latest ? formatDateShort(latest.timestamp) : "No funding timestamp"}
       </p>
 
-      <div className="h-24 rounded border bg-muted/30 p-2">
+      <div className="h-24 rounded-xl border border-border/70 bg-background/55 p-2">
         {sorted.length > 1 ? (
           <svg
             ref={svgRef}
@@ -106,9 +106,9 @@ export function FundingPanel({ points, cursor }: FundingPanelProps) {
             onMouseMove={(event) => handleMove(event.clientX)}
             onMouseLeave={() => setHoveredIndex(null)}
           >
-            <line x1="0" y1="50" x2="100" y2="50" stroke="#64748b" strokeDasharray="2 2" strokeWidth="0.8" />
-            <path d={path} fill="none" stroke="#0e7490" strokeWidth="1.8" />
-            <line x1={activeX} y1="0" x2={activeX} y2="100" stroke="#0f172a" strokeWidth="0.8" />
+            <line x1="0" y1="50" x2="100" y2="50" stroke="#65738F" strokeDasharray="2 2" strokeWidth="0.8" />
+            <path d={path} fill="none" stroke="#14b8a6" strokeWidth="1.8" />
+            <line x1={activeX} y1="0" x2={activeX} y2="100" stroke="#e5edf8" strokeWidth="0.8" />
           </svg>
         ) : sorted.length === 1 ? (
           <svg
@@ -119,8 +119,8 @@ export function FundingPanel({ points, cursor }: FundingPanelProps) {
             onMouseMove={(event) => handleMove(event.clientX)}
             onMouseLeave={() => setHoveredIndex(null)}
           >
-            <line x1="0" y1={singleY} x2="100" y2={singleY} stroke="#0e7490" strokeWidth="1.6" />
-            <circle cx="50" cy={singleY} r="1.8" fill="#0e7490" />
+            <line x1="0" y1={singleY} x2="100" y2={singleY} stroke="#14b8a6" strokeWidth="1.6" />
+            <circle cx="50" cy={singleY} r="1.8" fill="#14b8a6" />
           </svg>
         ) : (
           <p className="text-xs text-muted-foreground">

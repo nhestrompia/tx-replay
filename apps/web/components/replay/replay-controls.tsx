@@ -26,7 +26,11 @@ export function ReplayControls(props: ReplayControlsProps) {
   const progress = ((props.cursor - props.replayStart) / (props.replayEnd - props.replayStart || 1)) * 100
 
   return (
-    <div className="space-y-3 rounded-lg border bg-card p-3">
+    <div className="space-y-4 rounded-2xl border border-border/80 bg-card/90 p-4 md:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Replay Transport</p>
+        <p className="text-xs text-muted-foreground">{progress.toFixed(1)}% complete</p>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         {props.isPlaying ? (
           <Button size="sm" onClick={props.onPause}>
@@ -70,7 +74,7 @@ export function ReplayControls(props: ReplayControlsProps) {
         max={props.replayEnd}
         value={props.cursor}
         onChange={(event) => props.onCursorChange(Number(event.target.value))}
-        className="w-full"
+        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
       />
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">

@@ -46,56 +46,89 @@ export function WalletSearchForm() {
   const [toDate, setToDate] = useState<Date | undefined>(defaults.to)
 
   return (
-    <Card className="mx-auto max-w-3xl">
-      <CardHeader>
-        <CardTitle>Hyperliquid Position Replayer</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form
-          className="grid gap-4 md:grid-cols-[1fr_180px_180px_auto]"
-          onSubmit={(event) => {
-            event.preventDefault()
-            const nextWallet = wallet.trim()
-            const from = toMs(fromDate, false)
-            const to = toMs(toDate, true)
-
-            if (!nextWallet || !from || !to || from >= to) {
-              return
-            }
-
-            const search = new URLSearchParams({
-              wallet: nextWallet,
-              from: String(from),
-              to: String(to)
-            })
-            router.push(`/positions?${search.toString()}`)
-          }}
-        >
-          <Input
-            name="wallet"
-            placeholder="0x... wallet address"
-            required
-            value={wallet}
-            onChange={(event) => setWallet(event.target.value)}
-          />
-          <DatePicker
-            value={fromDate}
-            onChange={setFromDate}
-            placeholder="From date"
-            disabled={(date) => date > today || (toDate ? date > toDate : false)}
-          />
-          <DatePicker
-            value={toDate}
-            onChange={setToDate}
-            placeholder="To date"
-            disabled={(date) => date > today || (fromDate ? date < fromDate : false)}
-          />
-          <Button type="submit">Load Positions</Button>
-        </form>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Date-bounded queries are required to keep large wallets fast.
+    <div className="fade-in-up mx-auto max-w-5xl space-y-6">
+      <header className="space-y-3 text-left">
+        <p className="inline-flex items-center rounded-full bg-accent/35 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-accent-foreground">
+          Hyperliquid Replay Engine
         </p>
-      </CardContent>
-    </Card>
+        <h1 className="max-w-3xl text-4xl font-semibold leading-none text-foreground md:text-6xl">
+          Replay every fill and market turn with timeline precision.
+        </h1>
+        <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
+          Load wallet positions in a strict date window, then inspect event-by-event PnL and market context.
+        </p>
+      </header>
+
+      <Card className="border-primary/25">
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-2xl">Find Wallet Positions</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Date-bounded queries keep large wallets responsive and deterministic.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="panel-grid md:grid-cols-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const nextWallet = wallet.trim()
+              const from = toMs(fromDate, false)
+              const to = toMs(toDate, true)
+
+              if (!nextWallet || !from || !to || from >= to) {
+                return
+              }
+
+              const search = new URLSearchParams({
+                wallet: nextWallet,
+                from: String(from),
+                to: String(to)
+              })
+              router.push(`/positions?${search.toString()}`)
+            }}
+          >
+            <div className="space-y-2 md:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Wallet
+              </p>
+              <Input
+                name="wallet"
+                placeholder="0x... wallet address"
+                required
+                value={wallet}
+                onChange={(event) => setWallet(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Start Date
+              </p>
+              <DatePicker
+                value={fromDate}
+                onChange={setFromDate}
+                placeholder="From date"
+                disabled={(date) => date > today || (toDate ? date > toDate : false)}
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                End Date
+              </p>
+              <DatePicker
+                value={toDate}
+                onChange={setToDate}
+                placeholder="To date"
+                disabled={(date) => date > today || (fromDate ? date < fromDate : false)}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Button type="submit" className="h-11 w-full md:w-auto">
+                Load Positions
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

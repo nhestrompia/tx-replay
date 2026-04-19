@@ -37,8 +37,8 @@ export function PositionSummary({ position, replayPnl }: PositionSummaryProps) {
         : "closed"
 
   return (
-    <div className="rounded-lg border bg-card p-3 text-sm">
-      <h3 className="mb-2 font-semibold">Position Summary</h3>
+    <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-sm">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">Position Summary</h3>
       <div className="grid grid-cols-2 gap-2">
         <span className="text-muted-foreground">Pair</span>
         <span>{position.pair}</span>

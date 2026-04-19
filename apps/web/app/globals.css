@@ -3,29 +3,94 @@
 @tailwind utilities;
 
 :root {
-  --background: 38 35% 98%;
-  --foreground: 220 15% 12%;
-  --card: 0 0% 100%;
-  --card-foreground: 220 15% 12%;
-  --primary: 208 90% 45%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 190 24% 92%;
-  --secondary-foreground: 220 20% 20%;
-  --muted: 210 20% 94%;
-  --muted-foreground: 220 10% 35%;
-  --accent: 200 80% 92%;
-  --accent-foreground: 220 20% 20%;
-  --border: 210 20% 86%;
-  --input: 210 20% 86%;
-  --ring: 208 90% 45%;
+  --background: 226 27% 8%;
+  --foreground: 214 48% 96%;
+  --card: 225 24% 12%;
+  --card-foreground: 214 48% 96%;
+  --primary: 185 91% 42%;
+  --primary-foreground: 213 38% 8%;
+  --secondary: 223 20% 18%;
+  --secondary-foreground: 214 44% 88%;
+  --muted: 223 19% 16%;
+  --muted-foreground: 215 19% 67%;
+  --accent: 200 74% 23%;
+  --accent-foreground: 214 52% 93%;
+  --border: 223 18% 24%;
+  --input: 223 18% 24%;
+  --ring: 185 91% 42%;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
 }
 
 * {
   @apply border-border;
 }
 
+html,
+body {
+  min-height: 100%;
+}
+
 body {
   @apply bg-background text-foreground;
-  font-family: "Space Grotesk", "Manrope", "Avenir Next", "Segoe UI", sans-serif;
-  background-image: radial-gradient(circle at 20% 0%, rgba(42, 160, 208, 0.12), transparent 34%);
+  font-family: var(--font-body), "Segoe UI", sans-serif;
+  background-image:
+    radial-gradient(circle at 10% -10%, rgba(17, 168, 193, 0.2), transparent 32%),
+    radial-gradient(circle at 90% 0%, rgba(28, 88, 156, 0.2), transparent 28%),
+    linear-gradient(180deg, rgba(9, 11, 24, 1) 0%, rgba(12, 15, 30, 1) 100%);
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), "Segoe UI", sans-serif;
+  letter-spacing: 0.02em;
+}
+
+::selection {
+  background: rgba(20, 179, 213, 0.35);
+  color: hsl(var(--foreground));
+}
+
+.panel-grid {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.app-shell {
+  position: relative;
+}
+
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.2;
+  z-index: -1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in-up {
+    animation: fade-in-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -62,8 +62,8 @@ export function PositionsView() {
   }
 
   return (
-    <PageShell className="space-y-4">
-      <div>
+    <PageShell className="space-y-6">
+      <div className="fade-in-up">
         <Link href="/">
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -72,26 +72,47 @@ export function PositionsView() {
         </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Positions for {wallet}</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="fade-in-up border-primary/20">
+        <CardHeader className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Wallet Scope</p>
+          <CardTitle className="break-all text-2xl md:text-3xl">Positions for {wallet}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Showing positions between {new Date(from).toLocaleDateString()} and {new Date(to).toLocaleDateString()}.
+            Showing reconstructed positions between {new Date(from).toLocaleDateString()} and{" "}
+            {new Date(to).toLocaleDateString()}.
           </p>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-background/60 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">From</p>
+              <p className="text-sm font-medium">{new Date(from).toLocaleDateString()}</p>
+            </div>
+            <div className="rounded-xl bg-background/60 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">To</p>
+              <p className="text-sm font-medium">{new Date(to).toLocaleDateString()}</p>
+            </div>
+            <div className="rounded-xl bg-background/60 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Results</p>
+              <p className="text-sm font-medium">{filteredItems.length} positions</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      <PositionFilters wallet={wallet} from={from} to={to} pair={pair} direction={direction} />
+      <div className="fade-in-up">
+        <PositionFilters wallet={wallet} from={from} to={to} pair={pair} direction={direction} />
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Reconstructed Positions</CardTitle>
+      <Card className="fade-in-up">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-xl">Reconstructed Positions</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Open any row to launch the position replay timeline.
+          </p>
         </CardHeader>
         <CardContent>
           {query.isLoading && <p className="text-sm text-muted-foreground">Loading positions...</p>}
-          {query.error && <p className="text-sm text-red-600">Failed to load positions.</p>}
+          {query.error && <p className="text-sm text-rose-300">Failed to load positions.</p>}
           {query.data && <PositionTable wallet={wallet} from={from} to={to} positions={filteredItems} />}
         </CardContent>
       </Card>

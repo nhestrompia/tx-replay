@@ -162,10 +162,10 @@ export function MarketContextPanel({
   const xSearchUrl = `https://x.com/search?q=${xQuery}&src=typed_query&f=live`
 
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <h3 className="mb-2 text-sm font-semibold">Market Context</h3>
+    <div className="rounded-2xl border border-border/80 bg-card/90 p-4">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">Market Context</h3>
 
-      <div className="space-y-1 text-xs">
+      <div className="space-y-1 text-xs text-foreground/90">
         <p>
           Window: <span className="text-muted-foreground">{formatDateShort(activeStart)} → {formatDateShort(activeEnd)}</span>
         </p>

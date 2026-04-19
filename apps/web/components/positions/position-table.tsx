@@ -14,11 +14,15 @@ type PositionTableProps = {
 
 export function PositionTable({ wallet, from, to, positions }: PositionTableProps) {
   if (!positions.length) {
-    return <p className="text-sm text-muted-foreground">No positions found in this date range.</p>
+    return (
+      <p className="rounded-xl border border-border/70 bg-background/60 px-4 py-6 text-sm text-muted-foreground">
+        No positions found in this date range.
+      </p>
+    )
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="overflow-x-auto rounded-2xl border border-border/70 bg-background/45">
       <Table>
         <Thead>
           <tr>
@@ -40,7 +44,7 @@ export function PositionTable({ wallet, from, to, positions }: PositionTableProp
             const quote = quoteCurrencyFromPair(position.pair)
 
             return (
-              <tr key={position.id}>
+              <tr key={position.id} className="hover:bg-accent/25">
                 <Td className="font-medium">{position.pair}</Td>
                 <Td>
                   <Badge tone={position.direction === "long" ? "green" : "red"}>{position.direction}</Badge>
@@ -55,7 +59,7 @@ export function PositionTable({ wallet, from, to, positions }: PositionTableProp
                 <Td>{position.fills.length}</Td>
                 <Td>
                   <Link
-                    className="text-primary underline-offset-4 hover:underline"
+                    className="inline-flex items-center rounded-full bg-primary/22 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-primary hover:bg-primary/32"
                     href={`/replay/${position.id}?wallet=${wallet}&from=${from}&to=${to}`}
                   >
                     Replay

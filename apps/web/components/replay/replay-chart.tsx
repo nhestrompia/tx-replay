@@ -308,8 +308,8 @@ export function ReplayChart({
     pnlStatus === "pre_open"
       ? "text-muted-foreground"
       : pnl >= 0
-        ? "text-emerald-700"
-        : "text-rose-700"
+        ? "text-emerald-300"
+        : "text-rose-300"
   const pnlText = pnlStatus === "pre_open" ? "--" : formatPnlWithUnit(pnl, quote, 3)
 
   const occurredEvents = useMemo(
@@ -427,7 +427,7 @@ export function ReplayChart({
 
   return (
     <div
-      className="relative h-[420px] w-full overflow-hidden rounded-lg border bg-white"
+      className="relative h-[420px] w-full overflow-hidden rounded-2xl border border-border/80 bg-card/95"
       onMouseLeave={() => {
         clearTooltipCloseTimer()
         setHoveredClusterKey(null)
@@ -454,7 +454,7 @@ export function ReplayChart({
         </span>
       </div>
       <div className="absolute right-3 top-3 z-40 flex items-center gap-2">
-        <div className="inline-flex items-center gap-1 rounded-md border bg-white/95 p-0.5 shadow-sm">
+        <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-background/90 p-0.5">
           <Button
             size="sm"
             variant={chartStyle === "line" ? "default" : "ghost"}
@@ -500,8 +500,8 @@ export function ReplayChart({
               candles={chartStyle === "candles" ? chartCandles : undefined}
               candleWidth={chartStyle === "candles" ? candleWidth : undefined}
               window={renderWindowSeconds}
-              theme="light"
-              color="#1985A1"
+              theme="dark"
+              color="#14b8a6"
               grid
               scrub={chartStyle === "line"}
               cursor={chartStyle === "line" ? "crosshair" : "default"}
@@ -520,7 +520,7 @@ export function ReplayChart({
           </div>
 
           <div
-            className="pointer-events-none absolute inset-2 bg-white/55"
+            className="pointer-events-none absolute inset-2 bg-background/50"
             style={{
               left: `calc(${revealLeftPercent} + 8px)`,
               right: `${PLOT_PADDING.right + 8}px`
@@ -558,10 +558,10 @@ export function ReplayChart({
                     <span
                       className={
                         cluster.tone === "red"
-                          ? "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-100 px-1 text-[11px] font-semibold text-rose-800"
+                          ? "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500/30 px-1 text-[11px] font-semibold text-rose-100"
                           : cluster.tone === "green"
-                            ? "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-100 px-1 text-[11px] font-semibold text-emerald-800"
-                            : "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-200 px-1 text-[11px] font-semibold text-slate-700"
+                            ? "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500/30 px-1 text-[11px] font-semibold text-emerald-100"
+                            : "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-700 px-1 text-[11px] font-semibold text-slate-100"
                       }
                     >
                       {cluster.label}
@@ -593,7 +593,7 @@ export function ReplayChart({
               onMouseEnter={clearTooltipCloseTimer}
               onMouseLeave={scheduleTooltipClose}
             >
-              <Card className="bg-white/95 shadow-md backdrop-blur-sm">
+              <Card className="bg-card/95 shadow-xl">
                 <CardContent className="space-y-2 p-3 text-xs">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold">

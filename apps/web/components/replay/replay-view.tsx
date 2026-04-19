@@ -83,7 +83,7 @@ export function ReplayView({ id, wallet, from, to }: ReplayViewProps) {
             Back to Positions
           </Button>
         </Link>
-        <p className="text-sm text-red-600">{errorMessage}</p>
+        <p className="text-sm text-rose-300">{errorMessage}</p>
       </PageShell>
     )
   }
@@ -146,33 +146,38 @@ function ReplayLoadedView({
   }, [player.cursor, player.isPlaying, player.pause, player.play, player.reset, replay.replayEnd])
 
   return (
-    <PageShell className="space-y-4">
-      <div>
+    <PageShell className="space-y-6">
+      <div className="fade-in-up flex flex-wrap items-center justify-between gap-3">
         <Link href={backHref}>
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Positions
           </Button>
         </Link>
+        <p className="rounded-full bg-accent/35 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-accent-foreground">
+          {replay.position.pair} replay
+        </p>
       </div>
 
-      <ReplayControls
-        isPlaying={player.isPlaying}
-        speed={player.speed}
-        cursor={player.cursor}
-        replayStart={replay.replayStart}
-        replayEnd={replay.replayEnd}
-        onPlay={player.play}
-        onPause={player.pause}
-        onReset={player.reset}
-        onStepBack={player.stepBack}
-        onStepForward={player.stepForward}
-        onCursorChange={player.setCursor}
-        onSpeedChange={player.setSpeed}
-      />
+      <div className="fade-in-up">
+        <ReplayControls
+          isPlaying={player.isPlaying}
+          speed={player.speed}
+          cursor={player.cursor}
+          replayStart={replay.replayStart}
+          replayEnd={replay.replayEnd}
+          onPlay={player.play}
+          onPause={player.pause}
+          onReset={player.reset}
+          onStepBack={player.stepBack}
+          onStepForward={player.stepForward}
+          onCursorChange={player.setCursor}
+          onSpeedChange={player.setSpeed}
+        />
+      </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-5">
           <ReplayChart
             candles={replay.candles}
             events={replay.events}
@@ -186,7 +191,7 @@ function ReplayLoadedView({
           <EventList events={replay.events} cursor={player.cursor} pair={replay.position.pair} />
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <PositionSummary position={replay.position} replayPnl={replayPnl} />
           <FundingPanel points={replay.funding} cursor={player.cursor} />
           <MarketContextPanel

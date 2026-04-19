@@ -34,15 +34,15 @@ export function EventList({ events, cursor, pair }: EventListProps) {
   const quote = quoteCurrencyFromPair(pair)
 
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="rounded-2xl border border-border/80 bg-card/90 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Position Events</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-muted-foreground">Position Events</h3>
         <Badge tone="default">
           {happened.length}/{sorted.length}
         </Badge>
       </div>
 
-      <div className="mb-3 rounded-md border bg-muted/20 p-3">
+      <div className="mb-3 rounded-xl border border-border/70 bg-background/60 p-3">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Current Event</p>
         {current ? (
           <div className="mt-2 space-y-1">
@@ -64,7 +64,7 @@ export function EventList({ events, cursor, pair }: EventListProps) {
 
       <ul className="max-h-64 space-y-2 overflow-auto pr-1 text-xs">
         {recentHappened.map((event, idx) => (
-          <li key={`${event.timestamp}-${idx}`} className="rounded-md border bg-background/80 px-3 py-2">
+          <li key={`${event.timestamp}-${idx}`} className="rounded-xl border border-border/70 bg-background/70 px-3 py-2">
             <div className="mb-1 flex items-center gap-2">
               <Badge tone={eventTone(event.event_type)}>{LABELS[event.event_type]}</Badge>
               <span className="text-muted-foreground">{formatDateShort(event.timestamp)}</span>

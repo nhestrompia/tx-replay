@@ -87,35 +87,52 @@ export function PositionFilters({ wallet, from, to, pair, direction }: PositionF
 
   return (
     <Card>
-      <CardContent className="pt-4">
-        <div className="grid gap-3 md:grid-cols-[1fr_180px_180px_180px]">
-          <Input
-            name="pair"
-            placeholder="Filter pair (e.g. BTC-PERP)"
-            value={pairInput}
-            onChange={(event) => setPairInput(event.target.value)}
-          />
-          <Select
-            name="direction"
-            value={directionInput}
-            onChange={(event) => setDirectionInput(event.target.value)}
-          >
-            <option value="">All directions</option>
-            <option value="long">Long</option>
-            <option value="short">Short</option>
-          </Select>
-          <DatePicker
-            value={fromDate}
-            onChange={setFromDate}
-            placeholder="From date"
-            disabled={(date) => date > today || (toDate ? date > toDate : false)}
-          />
-          <DatePicker
-            value={toDate}
-            onChange={setToDate}
-            placeholder="To date"
-            disabled={(date) => date > today || (fromDate ? date < fromDate : false)}
-          />
+      <CardContent className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Filter Controls
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Pair</p>
+            <Input
+              name="pair"
+              placeholder="Filter pair (e.g. BTC-PERP)"
+              value={pairInput}
+              onChange={(event) => setPairInput(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Direction</p>
+            <Select
+              name="direction"
+              value={directionInput}
+              onChange={(event) => setDirectionInput(event.target.value)}
+            >
+              <option value="">All directions</option>
+              <option value="long">Long</option>
+              <option value="short">Short</option>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">From</p>
+            <DatePicker
+              value={fromDate}
+              onChange={setFromDate}
+              placeholder="From date"
+              disabled={(date) => date > today || (toDate ? date > toDate : false)}
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">To</p>
+            <DatePicker
+              value={toDate}
+              onChange={setToDate}
+              placeholder="To date"
+              disabled={(date) => date > today || (fromDate ? date < fromDate : false)}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
