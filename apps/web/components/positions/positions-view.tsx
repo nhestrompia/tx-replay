@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react"
 
 import { PageShell } from "@/components/shared/page-shell"
 import { PositionFilters } from "@/components/positions/position-filters"
+import { PositionsResultsSkeleton } from "@/components/positions/positions-skeleton"
 import { PositionTable } from "@/components/positions/position-table"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -118,7 +119,7 @@ export function PositionsView() {
           </p>
         </CardHeader>
         <CardContent>
-          {query.isLoading && <p className="text-sm text-muted-foreground">Loading positions...</p>}
+          {query.isLoading && <PositionsResultsSkeleton />}
           {query.error && <p className="text-sm text-rose-300">Failed to load positions.</p>}
           {query.data && <PositionTable wallet={wallet} from={from} to={to} positions={filteredItems} />}
         </CardContent>

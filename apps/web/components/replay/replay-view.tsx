@@ -9,6 +9,7 @@ import { FundingPanel } from "@/components/replay/funding-panel"
 import { MarketContextPanel } from "@/components/replay/market-context-panel"
 import { ReplayChart } from "@/components/replay/replay-chart"
 import { ReplayControls } from "@/components/replay/replay-controls"
+import { ReplayPageSkeleton } from "@/components/replay/replay-skeleton"
 import { PositionSummary } from "@/components/replay/position-summary"
 import { PageShell } from "@/components/shared/page-shell"
 import { Badge } from "@/components/ui/badge"
@@ -62,17 +63,7 @@ export function ReplayView({ id, wallet, from, to }: ReplayViewProps) {
   }
 
   if (query.isLoading) {
-    return (
-      <PageShell>
-        <Link href={backHref}>
-          <Button variant="outline" size="sm" className="mb-3">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Positions
-          </Button>
-        </Link>
-        <p className="text-sm text-muted-foreground">Loading replay...</p>
-      </PageShell>
-    )
+    return <ReplayPageSkeleton />
   }
 
   if (query.error || !query.data) {
