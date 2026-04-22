@@ -1,12 +1,29 @@
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
+
 import { PageShell } from "@/components/shared/page-shell"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export function ReplayPageSkeleton() {
+type ReplayPageSkeletonProps = {
+  backHref?: string
+}
+
+export function ReplayPageSkeleton({ backHref }: ReplayPageSkeletonProps) {
   return (
     <PageShell className="space-y-6">
       <div className="space-y-3">
-        <Skeleton className="h-8 w-40" />
+        {backHref ? (
+          <Link href={backHref}>
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Positions
+            </Button>
+          </Link>
+        ) : (
+          <Skeleton className="h-8 w-40" />
+        )}
         <div className="flex flex-wrap gap-2">
           <Skeleton className="h-7 w-36" />
           <Skeleton className="h-7 w-20" />

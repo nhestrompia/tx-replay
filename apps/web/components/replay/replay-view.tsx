@@ -63,7 +63,7 @@ export function ReplayView({ id, wallet, from, to }: ReplayViewProps) {
   }
 
   if (query.isLoading) {
-    return <ReplayPageSkeleton />
+    return <ReplayPageSkeleton backHref={backHref} />
   }
 
   if (query.error || !query.data) {

@@ -11,6 +11,7 @@ import { PositionsResultsSkeleton } from "@/components/positions/positions-skele
 import { PositionTable } from "@/components/positions/position-table"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { usePositionsQuery } from "@/hooks/use-positions-query"
 
 function parseRange(searchParams: URLSearchParams) {
@@ -96,7 +97,11 @@ export function PositionsView() {
             </div>
             <div className="rounded-xl bg-background/60 px-3 py-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Results</p>
-              <p className="text-sm font-medium">{filteredItems.length} positions</p>
+              {query.isLoading ? (
+                <Skeleton className="mt-1 h-5 w-24" />
+              ) : (
+                <p className="text-sm font-medium">{filteredItems.length} positions</p>
+              )}
             </div>
           </div>
           {query.data ? (
