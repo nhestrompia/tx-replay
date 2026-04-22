@@ -1,5 +1,6 @@
 "use client"
 
+import { format } from "date-fns"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -31,6 +32,10 @@ function toMs(date: Date | undefined, endOfDay: boolean): number {
     next.setHours(0, 0, 0, 0)
   }
   return next.getTime()
+}
+
+function displayDate(value: Date | undefined): string {
+  return value ? format(value, "yyyy-MM-dd") : "--"
 }
 
 export function WalletSearchForm() {
@@ -122,9 +127,14 @@ export function WalletSearchForm() {
               />
             </div>
             <div className="md:col-span-2">
-              <Button type="submit" className="h-11 w-full md:w-auto">
-                Load Positions
-              </Button>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Range: {displayDate(fromDate)} to {displayDate(toDate)}
+                </p>
+                <Button type="submit" className="h-11 w-full md:w-auto">
+                  Load Positions
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>

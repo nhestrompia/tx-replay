@@ -92,6 +92,7 @@ export function PositionFilters({ wallet, from, to, pair, direction }: PositionF
           <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
             Filter Controls
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">Filters auto-apply as you type.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-2">

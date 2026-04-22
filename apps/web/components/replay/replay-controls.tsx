@@ -29,7 +29,7 @@ export function ReplayControls(props: ReplayControlsProps) {
     <div className="space-y-4 rounded-2xl border border-border/80 bg-card/90 p-4 md:p-5">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Replay Transport</p>
-        <p className="text-xs text-muted-foreground">{progress.toFixed(1)}% complete</p>
+        <p className="text-xs text-muted-foreground">{progress.toFixed(1)}% complete · Space toggles play</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {props.isPlaying ? (
@@ -55,12 +55,14 @@ export function ReplayControls(props: ReplayControlsProps) {
         </Button>
 
         <div className="ml-auto flex items-center gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Speed</p>
           {SPEEDS.map((speed) => (
             <Button
               key={speed}
               size="sm"
               variant={props.speed === speed ? "default" : "secondary"}
               onClick={() => props.onSpeedChange(speed)}
+              aria-label={`Set replay speed to ${speed}x`}
             >
               {speed}x
             </Button>

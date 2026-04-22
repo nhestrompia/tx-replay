@@ -28,12 +28,12 @@ export function PositionTable({ wallet, from, to, positions }: PositionTableProp
           <tr>
             <Th>Pair</Th>
             <Th>Direction</Th>
-            <Th>Open</Th>
-            <Th>Close</Th>
-            <Th>Duration</Th>
+            <Th className="hidden md:table-cell">Open</Th>
+            <Th className="hidden md:table-cell">Close</Th>
+            <Th className="hidden lg:table-cell">Duration</Th>
             <Th>Realized PnL</Th>
-            <Th>Max Size</Th>
-            <Th>Fills</Th>
+            <Th className="hidden lg:table-cell">Max Size</Th>
+            <Th className="hidden sm:table-cell">Fills</Th>
             <Th></Th>
           </tr>
         </Thead>
@@ -44,22 +44,22 @@ export function PositionTable({ wallet, from, to, positions }: PositionTableProp
             const quote = quoteCurrencyFromPair(position.pair)
 
             return (
-              <tr key={position.id} className="hover:bg-accent/25">
+              <tr key={position.id} className="odd:bg-background/25 hover:bg-accent/25">
                 <Td className="font-medium">{position.pair}</Td>
                 <Td>
                   <Badge tone={position.direction === "long" ? "green" : "red"}>{position.direction}</Badge>
                 </Td>
-                <Td>{formatDateShort(position.opened_at)}</Td>
-                <Td>{formatDateShort(position.closed_at)}</Td>
-                <Td>{formatDuration(duration)}</Td>
+                <Td className="hidden md:table-cell">{formatDateShort(position.opened_at)}</Td>
+                <Td className="hidden md:table-cell">{formatDateShort(position.closed_at)}</Td>
+                <Td className="hidden lg:table-cell">{formatDuration(duration)}</Td>
                 <Td>
                   <Badge tone={tone}>{formatPnlWithUnit(position.realized_pnl, quote, 3)}</Badge>
                 </Td>
-                <Td>{formatSizeWithUnit(position.max_size, position.pair, 4)}</Td>
-                <Td>{position.fills.length}</Td>
+                <Td className="hidden lg:table-cell">{formatSizeWithUnit(position.max_size, position.pair, 4)}</Td>
+                <Td className="hidden sm:table-cell">{position.fills.length}</Td>
                 <Td>
                   <Link
-                    className="inline-flex items-center rounded-full bg-primary/22 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-primary hover:bg-primary/32"
+                    className="inline-flex items-center rounded-full bg-primary/22 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary hover:bg-primary/32"
                     href={`/replay/${position.id}?wallet=${wallet}&from=${from}&to=${to}`}
                   >
                     Replay

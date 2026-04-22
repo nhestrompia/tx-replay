@@ -11,6 +11,7 @@ import { ReplayChart } from "@/components/replay/replay-chart"
 import { ReplayControls } from "@/components/replay/replay-controls"
 import { PositionSummary } from "@/components/replay/position-summary"
 import { PageShell } from "@/components/shared/page-shell"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useReplayPnl } from "@/hooks/use-replay-pnl"
@@ -148,14 +149,25 @@ function ReplayLoadedView({
   return (
     <PageShell className="space-y-6">
       <div className="fade-in-up flex flex-wrap items-center justify-between gap-3">
-        <Link href={backHref}>
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Positions
-          </Button>
-        </Link>
-        <p className="rounded-full bg-accent/35 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-accent-foreground">
-          {replay.position.pair} replay
+        <div className="space-y-2">
+          <Link href={backHref}>
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Positions
+            </Button>
+          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="rounded-full bg-accent/35 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-accent-foreground">
+              {replay.position.pair} replay
+            </p>
+            <Badge tone={replay.position.direction === "long" ? "green" : "red"}>
+              {replay.position.direction}
+            </Badge>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {new Date(replay.position.opened_at).toLocaleDateString()} to{" "}
+          {new Date(replay.position.closed_at).toLocaleDateString()}
         </p>
       </div>
 
@@ -176,7 +188,7 @@ function ReplayLoadedView({
         />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
         <div className="space-y-5">
           <ReplayChart
             candles={replay.candles}

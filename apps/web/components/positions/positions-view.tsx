@@ -46,6 +46,8 @@ export function PositionsView() {
       return pairMatches && directionMatches
     })
   }, [query.data, pair, direction])
+  const totalItems = query.data?.items.length ?? 0
+  const filtersActive = pair.trim().length > 0 || direction.trim().length > 0
 
   if (!wallet || !from || !to) {
     return (
@@ -96,6 +98,11 @@ export function PositionsView() {
               <p className="text-sm font-medium">{filteredItems.length} positions</p>
             </div>
           </div>
+          {query.data ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              {filtersActive ? `Filtered ${filteredItems.length} of ${totalItems} results.` : `Loaded ${totalItems} total results.`}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 

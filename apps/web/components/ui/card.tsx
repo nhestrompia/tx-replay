@@ -4,7 +4,8 @@ export function Card({ className, children }: { className?: string; children: Re
   return (
     <section
       className={cn(
-        "rounded-2xl border border-border/80 bg-card/90 text-card-foreground shadow-[0_18px_48px_-28px_rgba(5,8,20,0.95)]",
+        "rounded-2xl border border-border/80 bg-card/90 text-card-foreground shadow-[0_18px_48px_-28px_rgba(5,8,20,0.95)] transition-[border-color,transform] duration-200",
+        "hover:border-primary/35",
         className
       )}
     >
