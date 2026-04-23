@@ -125,7 +125,22 @@ export function PositionsView() {
         </CardHeader>
         <CardContent>
           {query.isLoading && <PositionsResultsSkeleton />}
-          {query.error && <p className="text-sm text-rose-300">Failed to load positions.</p>}
+          {query.error ? (
+            <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-4">
+              <p className="text-sm text-rose-200">Failed to load positions.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => {
+                  void query.refetch()
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : null}
           {query.data && <PositionTable wallet={wallet} from={from} to={to} positions={filteredItems} />}
         </CardContent>
       </Card>

@@ -62,19 +62,25 @@ export function EventList({ events, cursor, pair }: EventListProps) {
         ) : null}
       </div>
 
-      <ul className="max-h-64 space-y-2 overflow-auto pr-1 text-xs">
-        {recentHappened.map((event, idx) => (
-          <li key={`${event.timestamp}-${idx}`} className="rounded-xl border border-border/70 bg-background/70 px-3 py-2">
-            <div className="mb-1 flex items-center gap-2">
-              <Badge tone={eventTone(event.event_type)}>{LABELS[event.event_type]}</Badge>
-              <span className="text-muted-foreground">{formatDateShort(event.timestamp)}</span>
-            </div>
-            <p className="text-foreground">
-              {formatSizeWithUnit(event.fill_size, pair, 4)} @ {formatPriceWithUnit(event.fill_price, quote, 2)}
-            </p>
-          </li>
-        ))}
-      </ul>
+      {recentHappened.length === 0 ? (
+        <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-4 text-xs text-muted-foreground">
+          No events reached in the current replay cursor yet.
+        </div>
+      ) : (
+        <ul className="max-h-64 space-y-2 overflow-auto pr-1 text-xs">
+          {recentHappened.map((event, idx) => (
+            <li key={`${event.timestamp}-${idx}`} className="rounded-xl border border-border/70 bg-background/70 px-3 py-2">
+              <div className="mb-1 flex items-center gap-2">
+                <Badge tone={eventTone(event.event_type)}>{LABELS[event.event_type]}</Badge>
+                <span className="text-muted-foreground">{formatDateShort(event.timestamp)}</span>
+              </div>
+              <p className="text-foreground">
+                {formatSizeWithUnit(event.fill_size, pair, 4)} @ {formatPriceWithUnit(event.fill_price, quote, 2)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

@@ -75,7 +75,21 @@ export function ReplayView({ id, wallet, from, to }: ReplayViewProps) {
             Back to Positions
           </Button>
         </Link>
-        <p className="text-sm text-rose-300">{errorMessage}</p>
+        <Card className="max-w-xl border-rose-400/30 bg-rose-500/10">
+          <CardContent className="space-y-3">
+            <p className="text-sm text-rose-200">{errorMessage}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void query.refetch()
+              }}
+            >
+              Retry Replay Load
+            </Button>
+          </CardContent>
+        </Card>
       </PageShell>
     )
   }

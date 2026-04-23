@@ -10,6 +10,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Input } from "@/components/ui/input"
 
 const DEFAULT_LOOKBACK_DAYS = 30
+const LOOKBACK_PRESETS = [7, 30, 90]
 
 function defaultDateRange() {
   const to = new Date()
@@ -49,6 +50,14 @@ export function WalletSearchForm() {
   const [wallet, setWallet] = useState("")
   const [fromDate, setFromDate] = useState<Date | undefined>(defaults.from)
   const [toDate, setToDate] = useState<Date | undefined>(defaults.to)
+
+  const applyLookback = (days: number) => {
+    const to = new Date()
+    to.setHours(0, 0, 0, 0)
+    const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000)
+    setFromDate(from)
+    setToDate(to)
+  }
 
   return (
     <div className="fade-in-up mx-auto max-w-5xl space-y-6">
@@ -125,6 +134,22 @@ export function WalletSearchForm() {
                 placeholder="To date"
                 disabled={(date) => date > today || (fromDate ? date < fromDate : false)}
               />
+            </div>
+            <div className="md:col-span-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs text-muted-foreground">Quick ranges:</p>
+                {LOOKBACK_PRESETS.map((days) => (
+                  <Button
+                    key={days}
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => applyLookback(days)}
+                  >
+                    {days}d
+                  </Button>
+                ))}
+              </div>
             </div>
             <div className="md:col-span-2">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
