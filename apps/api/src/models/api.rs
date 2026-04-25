@@ -99,6 +99,8 @@ pub struct PositionsQuery {
     pub direction: Option<String>,
     pub page: Option<usize>,
     pub page_size: Option<usize>,
+    pub sort_by: Option<String>,
+    pub sort_dir: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

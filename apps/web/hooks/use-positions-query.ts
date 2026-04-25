@@ -12,6 +12,8 @@ export function usePositionsQuery(input: {
   direction?: "long" | "short"
   page?: number
   pageSize?: number
+  sortBy?: "opened_at" | "closed_at" | "max_size"
+  sortDir?: "asc" | "desc"
 }) {
   return useQuery({
     queryKey: ["positions", input],

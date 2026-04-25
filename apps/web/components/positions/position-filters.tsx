@@ -14,6 +14,8 @@ type PositionFiltersProps = {
   to: number
   pair?: string
   direction?: string
+  sortBy?: "opened_at" | "closed_at" | "max_size"
+  sortDir?: "asc" | "desc"
 }
 
 function startOfDayMs(value: Date): number {
@@ -28,7 +30,7 @@ function endOfDayMs(value: Date): number {
   return next.getTime()
 }
 
-export function PositionFilters({ wallet, from, to, pair, direction }: PositionFiltersProps) {
+export function PositionFilters({ wallet, from, to, pair, direction, sortBy, sortDir }: PositionFiltersProps) {
   const router = useRouter()
   const today = useMemo(() => {
     const d = new Date()
@@ -66,7 +68,10 @@ export function PositionFilters({ wallet, from, to, pair, direction }: PositionF
       const next = new URLSearchParams({
         wallet,
         from: String(startOfDayMs(fromDate)),
-        to: String(endOfDayMs(toDate))
+        to: String(endOfDayMs(toDate)),
+        page: "1",
+        sort_by: sortBy ?? "opened_at",
+        sort_dir: sortDir ?? "desc"
       })
 
       const normalizedPair = pairInput.trim().toUpperCase()
@@ -79,11 +84,16 @@ export function PositionFilters({ wallet, from, to, pair, direction }: PositionF
         next.set("direction", normalizedDirection)
       }
 
+      const nextQuery = next.toString()
+      if (window.location.search.slice(1) === nextQuery) {
+        return
+      }
+
       router.replace(`/positions?${next.toString()}`)
     }, 220)
 
     return () => window.clearTimeout(handle)
-  }, [wallet, pairInput, directionInput, fromDate, toDate, router])
+  }, [wallet, pairInput, directionInput, fromDate, toDate, sortBy, sortDir, router])
 
   return (
     <Card>

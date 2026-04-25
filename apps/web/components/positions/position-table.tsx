@@ -10,9 +10,27 @@ type PositionTableProps = {
   from: number
   to: number
   positions: Position[]
+  sortBy: "opened_at" | "closed_at" | "max_size"
+  sortDir: "asc" | "desc"
+  onSortChange: (value: "opened_at" | "closed_at" | "max_size") => void
 }
 
-export function PositionTable({ wallet, from, to, positions }: PositionTableProps) {
+function sortIndicator(active: boolean, dir: "asc" | "desc"): string {
+  if (!active) {
+    return "↕"
+  }
+  return dir === "asc" ? "↑" : "↓"
+}
+
+export function PositionTable({
+  wallet,
+  from,
+  to,
+  positions,
+  sortBy,
+  sortDir,
+  onSortChange
+}: PositionTableProps) {
   if (!positions.length) {
     return (
       <p className="rounded-xl border border-border/70 bg-background/60 px-4 py-6 text-sm text-muted-foreground">
@@ -28,11 +46,35 @@ export function PositionTable({ wallet, from, to, positions }: PositionTableProp
           <tr>
             <Th>Pair</Th>
             <Th>Direction</Th>
-            <Th className="hidden md:table-cell">Open</Th>
-            <Th className="hidden md:table-cell">Close</Th>
+            <Th className="hidden md:table-cell">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-inherit"
+                onClick={() => onSortChange("opened_at")}
+              >
+                Open {sortIndicator(sortBy === "opened_at", sortDir)}
+              </button>
+            </Th>
+            <Th className="hidden md:table-cell">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-inherit"
+                onClick={() => onSortChange("closed_at")}
+              >
+                Close {sortIndicator(sortBy === "closed_at", sortDir)}
+              </button>
+            </Th>
             <Th className="hidden lg:table-cell">Duration</Th>
             <Th>Realized PnL</Th>
-            <Th className="hidden lg:table-cell">Max Size</Th>
+            <Th className="hidden lg:table-cell">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-inherit"
+                onClick={() => onSortChange("max_size")}
+              >
+                Max Size {sortIndicator(sortBy === "max_size", sortDir)}
+              </button>
+            </Th>
             <Th className="hidden sm:table-cell">Fills</Th>
             <Th></Th>
           </tr>

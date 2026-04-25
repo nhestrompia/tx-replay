@@ -1,8 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
-import { useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect } from "react"
 import { ArrowLeft } from "lucide-react"
 
 import { PageShell } from "@/components/shared/page-shell"
@@ -14,42 +14,143 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usePositionsQuery } from "@/hooks/use-positions-query"
 
+type PositionSortBy = "opened_at" | "closed_at" | "max_size"
+type PositionSortDir = "asc" | "desc"
+const PAGE_SIZE = 25
+
+function normalizeDirection(value: string): "long" | "short" | "" {
+  const next = value.trim().toLowerCase()
+  if (next === "long" || next === "short") {
+    return next
+  }
+  return ""
+}
+
+function normalizeSortBy(value: string | null): PositionSortBy {
+  if (value === "closed_at" || value === "max_size" || value === "opened_at") {
+    return value
+  }
+  return "opened_at"
+}
+
+function normalizeSortDir(value: string | null): PositionSortDir {
+  return value === "asc" ? "asc" : "desc"
+}
+
 function parseRange(searchParams: URLSearchParams) {
   const wallet = searchParams.get("wallet") ?? ""
   const from = Number(searchParams.get("from") ?? 0)
   const to = Number(searchParams.get("to") ?? 0)
   const pair = searchParams.get("pair") ?? ""
-  const direction = searchParams.get("direction") ?? ""
-  return { wallet, from, to, pair, direction }
+  const direction = normalizeDirection(searchParams.get("direction") ?? "")
+  const page = Math.max(1, Number(searchParams.get("page") ?? 1) || 1)
+  const sortBy = normalizeSortBy(searchParams.get("sort_by"))
+  const sortDir = normalizeSortDir(searchParams.get("sort_dir"))
+  return { wallet, from, to, pair, direction, page, sortBy, sortDir }
+}
+
+function buildPositionsSearch(input: {
+  wallet: string
+  from: number
+  to: number
+  pair: string
+  direction: "long" | "short" | ""
+  page: number
+  sortBy: PositionSortBy
+  sortDir: PositionSortDir
+}) {
+  const next = new URLSearchParams({
+    wallet: input.wallet,
+    from: String(input.from),
+    to: String(input.to),
+    page: String(Math.max(1, input.page)),
+    sort_by: input.sortBy,
+    sort_dir: input.sortDir
+  })
+  if (input.pair.trim().length > 0) {
+    next.set("pair", input.pair.trim().toUpperCase())
+  }
+  if (input.direction) {
+    next.set("direction", input.direction)
+  }
+  return next
 }
 
 export function PositionsView() {
+  const router = useRouter()
   const searchParams = useSearchParams()
-  const { wallet, from, to, pair, direction } = parseRange(searchParams)
+  const { wallet, from, to, pair, direction, page, sortBy, sortDir } = parseRange(searchParams)
 
   const query = usePositionsQuery({
     wallet,
     from,
     to,
-    page: 1,
-    pageSize: 100
+    pair: pair.trim().length > 0 ? pair.trim().toUpperCase() : undefined,
+    direction: direction || undefined,
+    page,
+    pageSize: PAGE_SIZE,
+    sortBy,
+    sortDir
   })
-  const filteredItems = useMemo(() => {
+  const items = query.data?.items ?? []
+  const totalItems = query.data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE))
+  const filtersActive = pair.trim().length > 0 || Boolean(direction)
+  const startIndex = totalItems === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const endIndex = totalItems === 0 ? 0 : Math.min(totalItems, startIndex + Math.max(0, items.length - 1))
+
+  useEffect(() => {
     if (!query.data) {
-      return []
+      return
     }
-
-    const pairNeedle = pair.trim().toUpperCase()
-    const directionNeedle = direction.trim().toLowerCase()
-
-    return query.data.items.filter((position) => {
-      const pairMatches = pairNeedle.length === 0 || position.pair.toUpperCase().includes(pairNeedle)
-      const directionMatches = directionNeedle.length === 0 || position.direction === directionNeedle
-      return pairMatches && directionMatches
+    if (page <= totalPages) {
+      return
+    }
+    const nextSearch = buildPositionsSearch({
+      wallet,
+      from,
+      to,
+      pair,
+      direction,
+      page: totalPages,
+      sortBy,
+      sortDir
     })
-  }, [query.data, pair, direction])
-  const totalItems = query.data?.items.length ?? 0
-  const filtersActive = pair.trim().length > 0 || direction.trim().length > 0
+    router.replace(`/positions?${nextSearch.toString()}`)
+  }, [query.data, page, totalPages, wallet, from, to, pair, direction, sortBy, sortDir, router])
+
+  const changeSort = (nextSortBy: PositionSortBy) => {
+    const nextDir: PositionSortDir = sortBy === nextSortBy && sortDir === "desc" ? "asc" : "desc"
+    const nextSearch = buildPositionsSearch({
+      wallet,
+      from,
+      to,
+      pair,
+      direction,
+      page: 1,
+      sortBy: nextSortBy,
+      sortDir: nextDir
+    })
+    router.replace(`/positions?${nextSearch.toString()}`)
+  }
+
+  const changePage = (nextPage: number) => {
+    const clamped = Math.max(1, Math.min(totalPages, nextPage))
+    if (clamped === page) {
+      return
+    }
+    const nextSearch = buildPositionsSearch({
+      wallet,
+      from,
+      to,
+      pair,
+      direction,
+      page: clamped,
+      sortBy,
+      sortDir
+    })
+    router.push(`/positions?${nextSearch.toString()}`)
+  }
 
   if (!wallet || !from || !to) {
     return (
@@ -100,20 +201,30 @@ export function PositionsView() {
               {query.isLoading ? (
                 <Skeleton className="mt-1 h-5 w-24" />
               ) : (
-                <p className="text-sm font-medium">{filteredItems.length} positions</p>
+                <p className="text-sm font-medium">{totalItems} positions</p>
               )}
             </div>
           </div>
           {query.data ? (
             <p className="mt-3 text-xs text-muted-foreground">
-              {filtersActive ? `Filtered ${filteredItems.length} of ${totalItems} results.` : `Loaded ${totalItems} total results.`}
+              {filtersActive
+                ? `Filtered ${startIndex}-${endIndex} of ${totalItems} results.`
+                : `Showing ${startIndex}-${endIndex} of ${totalItems} results.`}
             </p>
           ) : null}
         </CardContent>
       </Card>
 
       <div className="fade-in-up">
-        <PositionFilters wallet={wallet} from={from} to={to} pair={pair} direction={direction} />
+        <PositionFilters
+          wallet={wallet}
+          from={from}
+          to={to}
+          pair={pair}
+          direction={direction}
+          sortBy={sortBy}
+          sortDir={sortDir}
+        />
       </div>
 
       <Card className="fade-in-up">
@@ -141,7 +252,37 @@ export function PositionsView() {
               </Button>
             </div>
           ) : null}
-          {query.data && <PositionTable wallet={wallet} from={from} to={to} positions={filteredItems} />}
+          {query.data && (
+            <>
+              <PositionTable
+                wallet={wallet}
+                from={from}
+                to={to}
+                positions={items}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSortChange={changeSort}
+              />
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
+                <p className="text-xs text-muted-foreground">
+                  Page {page} of {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => changePage(page - 1)} disabled={page <= 1}>
+                    Previous
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => changePage(page + 1)}
+                    disabled={page >= totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </PageShell>

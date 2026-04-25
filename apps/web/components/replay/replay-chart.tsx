@@ -205,7 +205,7 @@ function buildEventFallbackCandles(
   return out
 }
 
-function padCandlesToReplayStart(candles: Candle[], replayStart: number): Candle[] {
+function padCandlesToReplayWindow(candles: Candle[], replayStart: number, replayEnd: number): Candle[] {
   if (candles.length === 0) {
     return candles
   }
@@ -218,24 +218,46 @@ function padCandlesToReplayStart(candles: Candle[], replayStart: number): Candle
     return candles
   }
 
+  let padded = candles
   const alignedReplayStart = alignDown(replayStart, stepMs)
-  if (alignedReplayStart >= first.timestamp) {
-    return candles
+  if (alignedReplayStart < first.timestamp) {
+    const leftPadding: Candle[] = []
+    for (let timestamp = alignedReplayStart; timestamp < first.timestamp; timestamp += stepMs) {
+      leftPadding.push({
+        timestamp,
+        open: seedPrice,
+        high: seedPrice,
+        low: seedPrice,
+        close: seedPrice,
+        volume: 0
+      })
+    }
+    padded = [...leftPadding, ...padded]
   }
 
-  const leftPadding: Candle[] = []
-  for (let timestamp = alignedReplayStart; timestamp < first.timestamp; timestamp += stepMs) {
-    leftPadding.push({
-      timestamp,
-      open: seedPrice,
-      high: seedPrice,
-      low: seedPrice,
-      close: seedPrice,
-      volume: 0
-    })
+  const last = padded[padded.length - 1]
+  const tailPrice = last.close > 0 ? last.close : last.open
+  if (!Number.isFinite(tailPrice) || tailPrice <= 0) {
+    return padded
   }
 
-  return [...leftPadding, ...candles]
+  const alignedReplayEnd = alignDown(replayEnd, stepMs)
+  if (alignedReplayEnd > last.timestamp) {
+    const rightPadding: Candle[] = []
+    for (let timestamp = last.timestamp + stepMs; timestamp <= alignedReplayEnd; timestamp += stepMs) {
+      rightPadding.push({
+        timestamp,
+        open: tailPrice,
+        high: tailPrice,
+        low: tailPrice,
+        close: tailPrice,
+        volume: 0
+      })
+    }
+    padded = [...padded, ...rightPadding]
+  }
+
+  return padded
 }
 
 export function ReplayChart({
@@ -273,11 +295,11 @@ export function ReplayChart({
       .sort((a, b) => a.timestamp - b.timestamp)
 
     if (sortedCandles.length > 0) {
-      return padCandlesToReplayStart(sortedCandles, replayStart)
+      return padCandlesToReplayWindow(sortedCandles, replayStart, replayEnd)
     }
 
     const fallback = buildEventFallbackCandles(orderedEvents, replayStart, replayEnd)
-    return padCandlesToReplayStart(fallback, replayStart)
+    return padCandlesToReplayWindow(fallback, replayStart, replayEnd)
   }, [candles, orderedEvents, replayStart, replayEnd])
 
   const hasCandles = ordered.length > 0

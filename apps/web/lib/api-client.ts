@@ -10,6 +10,8 @@ type PositionParams = {
   direction?: "long" | "short"
   page?: number
   pageSize?: number
+  sortBy?: "opened_at" | "closed_at" | "max_size"
+  sortDir?: "asc" | "desc"
 }
 
 type ReplayParams = {
@@ -53,7 +55,9 @@ export async function fetchPositions(params: PositionParams): Promise<PositionLi
     pair: params.pair,
     direction: params.direction,
     page: params.page,
-    page_size: params.pageSize
+    page_size: params.pageSize,
+    sort_by: params.sortBy,
+    sort_dir: params.sortDir
   })
 
   const response = await fetch(url, { cache: "no-store" })

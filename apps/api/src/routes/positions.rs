@@ -2,6 +2,7 @@ use axum::{
     extract::{Query, State},
     Json,
 };
+use std::cmp::Ordering;
 
 use crate::{
     models::{
@@ -41,8 +42,32 @@ pub async fn list_positions(
         },
     );
 
-    positions.sort_by_key(|p| p.opened_at);
-    positions.reverse();
+    let sort_by = query
+        .sort_by
+        .as_deref()
+        .map(|value| value.to_ascii_lowercase())
+        .unwrap_or_else(|| "opened_at".to_string());
+    let sort_dir = query
+        .sort_dir
+        .as_deref()
+        .map(|value| value.to_ascii_lowercase())
+        .unwrap_or_else(|| "desc".to_string());
+
+    positions.sort_by(|a, b| {
+        let cmp = match sort_by.as_str() {
+            "max_size" => a
+                .max_size
+                .partial_cmp(&b.max_size)
+                .unwrap_or(Ordering::Equal),
+            "closed_at" => a.closed_at.cmp(&b.closed_at),
+            _ => a.opened_at.cmp(&b.opened_at),
+        };
+        if sort_dir == "asc" {
+            cmp
+        } else {
+            cmp.reverse()
+        }
+    });
 
     let page = query.page.unwrap_or(1).max(1);
     let page_size = query.page_size.unwrap_or(25).clamp(1, 100);

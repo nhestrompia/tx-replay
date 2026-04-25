@@ -51,6 +51,26 @@ pub fn validate_positions_query(query: &PositionsQuery) -> Result<(), ApiError> 
         }
     }
 
+    if let Some(sort_by) = &query.sort_by {
+        let s = sort_by.to_ascii_lowercase();
+        if s != "opened_at" && s != "closed_at" && s != "max_size" {
+            return Err(ApiError::bad_request(
+                "invalid_sort_by",
+                "sort_by must be opened_at, closed_at, or max_size",
+            ));
+        }
+    }
+
+    if let Some(sort_dir) = &query.sort_dir {
+        let s = sort_dir.to_ascii_lowercase();
+        if s != "asc" && s != "desc" {
+            return Err(ApiError::bad_request(
+                "invalid_sort_dir",
+                "sort_dir must be asc or desc",
+            ));
+        }
+    }
+
     Ok(())
 }
 
