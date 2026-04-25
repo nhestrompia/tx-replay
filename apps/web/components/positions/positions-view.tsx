@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usePositionsQuery } from "@/hooks/use-positions-query"
+import { formatDateOnly } from "@/lib/format"
 
 type PositionSortBy = "opened_at" | "closed_at" | "max_size"
 type PositionSortDir = "asc" | "desc"
@@ -182,19 +183,18 @@ export function PositionsView() {
           <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Wallet Scope</p>
           <CardTitle className="break-all text-2xl md:text-3xl">Positions for {wallet}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Showing reconstructed positions between {new Date(from).toLocaleDateString()} and{" "}
-            {new Date(to).toLocaleDateString()}.
+            Showing reconstructed positions between {formatDateOnly(from)} and {formatDateOnly(to)}.
           </p>
         </CardHeader>
         <CardContent className="pt-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-background/60 px-3 py-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">From</p>
-              <p className="text-sm font-medium">{new Date(from).toLocaleDateString()}</p>
+              <p className="text-sm font-medium">{formatDateOnly(from)}</p>
             </div>
             <div className="rounded-xl bg-background/60 px-3 py-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">To</p>
-              <p className="text-sm font-medium">{new Date(to).toLocaleDateString()}</p>
+              <p className="text-sm font-medium">{formatDateOnly(to)}</p>
             </div>
             <div className="rounded-xl bg-background/60 px-3 py-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Results</p>

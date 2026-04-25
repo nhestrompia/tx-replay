@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useReplayPnl } from "@/hooks/use-replay-pnl"
 import { useReplayPlayer } from "@/hooks/use-replay-player"
 import { useReplayQuery } from "@/hooks/use-replay-query"
+import { formatDateOnly } from "@/lib/format"
 
 type ReplayViewProps = {
   id: string
@@ -171,8 +172,7 @@ function ReplayLoadedView({
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          {new Date(replay.position.opened_at).toLocaleDateString()} to{" "}
-          {new Date(replay.position.closed_at).toLocaleDateString()}
+          {formatDateOnly(replay.position.opened_at)} to {formatDateOnly(replay.position.closed_at)}
         </p>
       </div>
 

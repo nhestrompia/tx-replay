@@ -1,4 +1,4 @@
-const DATE_TIME_LONG = new Intl.DateTimeFormat(undefined, {
+const DATE_TIME_LONG = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
   month: "short",
   day: "2-digit",
@@ -8,7 +8,7 @@ const DATE_TIME_LONG = new Intl.DateTimeFormat(undefined, {
   hour12: false
 })
 
-const DATE_TIME_SHORT = new Intl.DateTimeFormat(undefined, {
+const DATE_TIME_SHORT = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
   month: "short",
   day: "2-digit",
@@ -17,7 +17,13 @@ const DATE_TIME_SHORT = new Intl.DateTimeFormat(undefined, {
   hour12: false
 })
 
-const TIME_ONLY = new Intl.DateTimeFormat(undefined, {
+const DATE_ONLY = new Intl.DateTimeFormat("en-GB", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit"
+})
+
+const TIME_ONLY = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
@@ -32,6 +38,10 @@ export function formatDate(ts: number): string {
 
 export function formatDateShort(ts: number): string {
   return DATE_TIME_SHORT.format(new Date(ts))
+}
+
+export function formatDateOnly(ts: number): string {
+  return DATE_ONLY.format(new Date(ts))
 }
 
 export function formatTime(ts: number): string {
