@@ -518,13 +518,13 @@ export function ReplayChart({
           PnL {pnlStatus === "closed" ? "(Final)" : "(Live)"} {pnlText}
         </span>
       </div>
-      <div className="absolute right-3 top-3 z-40 flex items-center gap-2">
-        <div className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-background/90 p-1 shadow-[0_8px_24px_-16px_rgba(0,0,0,0.7)]">
+      <div className="absolute right-2.5 top-2.5 z-40 flex items-center gap-1.5">
+        <div className="inline-flex items-center gap-0.5 rounded-lg border border-border/70 bg-background/85 p-0.5 shadow-[0_8px_20px_-16px_rgba(0,0,0,0.75)]">
           <button
             type="button"
             onClick={() => setChartStyle("line")}
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+              "inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors",
               chartStyle === "line"
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-accent/45 hover:text-accent-foreground"
@@ -533,13 +533,12 @@ export function ReplayChart({
             aria-label="Line chart"
           >
             <ChartLine className="h-3.5 w-3.5" />
-            <span>Line</span>
           </button>
           <button
             type="button"
             onClick={() => setChartStyle("candles")}
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+              "inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors",
               chartStyle === "candles"
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-accent/45 hover:text-accent-foreground"
@@ -548,7 +547,6 @@ export function ReplayChart({
             aria-label="Candlestick chart"
           >
             <CandlestickChart className="h-3.5 w-3.5" />
-            <span>Candles</span>
           </button>
         </div>
         {ZOOM_PERCENTS.map((percent) => (
