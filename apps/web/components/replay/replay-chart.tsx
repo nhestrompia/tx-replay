@@ -16,6 +16,7 @@ import {
   formatSizeWithUnit,
   quoteCurrencyFromPair
 } from "@/lib/format"
+import { cn } from "@/lib/cn"
 import { Candle, ReplayEvent } from "@/lib/types"
 
 type ReplayChartProps = {
@@ -204,6 +205,39 @@ function buildEventFallbackCandles(
   return out
 }
 
+function padCandlesToReplayStart(candles: Candle[], replayStart: number): Candle[] {
+  if (candles.length === 0) {
+    return candles
+  }
+
+  const stepSec = inferCandleWidthSeconds(candles)
+  const stepMs = Math.max(1_000, stepSec * 1000)
+  const first = candles[0]
+  const seedPrice = first.open > 0 ? first.open : first.close
+  if (!Number.isFinite(seedPrice) || seedPrice <= 0) {
+    return candles
+  }
+
+  const alignedReplayStart = alignDown(replayStart, stepMs)
+  if (alignedReplayStart >= first.timestamp) {
+    return candles
+  }
+
+  const leftPadding: Candle[] = []
+  for (let timestamp = alignedReplayStart; timestamp < first.timestamp; timestamp += stepMs) {
+    leftPadding.push({
+      timestamp,
+      open: seedPrice,
+      high: seedPrice,
+      low: seedPrice,
+      close: seedPrice,
+      volume: 0
+    })
+  }
+
+  return [...leftPadding, ...candles]
+}
+
 export function ReplayChart({
   candles,
   events,
@@ -226,7 +260,7 @@ export function ReplayChart({
     [events]
   )
   const ordered = useMemo(() => {
-    const sorted = [...candles]
+    const sortedCandles = [...candles]
       .filter(
         (candle) =>
           Number.isFinite(candle.open) &&
@@ -238,11 +272,12 @@ export function ReplayChart({
       )
       .sort((a, b) => a.timestamp - b.timestamp)
 
-    if (sorted.length > 0) {
-      return sorted
+    if (sortedCandles.length > 0) {
+      return padCandlesToReplayStart(sortedCandles, replayStart)
     }
 
-    return buildEventFallbackCandles(orderedEvents, replayStart, replayEnd)
+    const fallback = buildEventFallbackCandles(orderedEvents, replayStart, replayEnd)
+    return padCandlesToReplayStart(fallback, replayStart)
   }, [candles, orderedEvents, replayStart, replayEnd])
 
   const hasCandles = ordered.length > 0
@@ -298,6 +333,14 @@ export function ReplayChart({
     time: candle.time,
     value: candle.close
   }))
+  const findNearestLinePoint = (targetTime: number) => {
+    if (lineData.length === 0) {
+      return null
+    }
+    return lineData.reduce((best, candidate) => {
+      return Math.abs(candidate.time - targetTime) < Math.abs(best.time - targetTime) ? candidate : best
+    }, lineData[0])
+  }
   const formatTime = (t: number) => formatAxisTime(t - timeOffsetSec, includeDateInAxis)
   const windowLabel = formatDuration((replayEnd - replayStart))
   const activityLabel = orderedEvents.length > 1
@@ -454,27 +497,37 @@ export function ReplayChart({
         </span>
       </div>
       <div className="absolute right-3 top-3 z-40 flex items-center gap-2">
-        <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-background/90 p-0.5">
-          <Button
-            size="sm"
-            variant={chartStyle === "line" ? "default" : "ghost"}
+        <div className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-background/90 p-1 shadow-[0_8px_24px_-16px_rgba(0,0,0,0.7)]">
+          <button
+            type="button"
             onClick={() => setChartStyle("line")}
-            className="h-6 w-6 p-0"
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+              chartStyle === "line"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent/45 hover:text-accent-foreground"
+            )}
             title="Line chart"
             aria-label="Line chart"
           >
             <ChartLine className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="sm"
-            variant={chartStyle === "candles" ? "default" : "ghost"}
+            <span>Line</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setChartStyle("candles")}
-            className="h-6 w-6 p-0"
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+              chartStyle === "candles"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent/45 hover:text-accent-foreground"
+            )}
             title="Candlestick chart"
             aria-label="Candlestick chart"
           >
             <CandlestickChart className="h-3.5 w-3.5" />
-          </Button>
+            <span>Candles</span>
+          </button>
         </div>
         {ZOOM_PERCENTS.map((percent) => (
           <Button
@@ -513,7 +566,12 @@ export function ReplayChart({
                   setHoverPoint(null)
                   return
                 }
-                setHoverPoint({ time: point.time, value: point.value })
+                const nearest = findNearestLinePoint(point.time)
+                if (!nearest) {
+                  setHoverPoint(null)
+                  return
+                }
+                setHoverPoint({ time: nearest.time, value: nearest.value })
               }}
               padding={PLOT_PADDING}
             />

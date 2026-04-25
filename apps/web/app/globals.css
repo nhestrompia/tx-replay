@@ -35,6 +35,35 @@ body {
   min-height: 100%;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.8) hsl(var(--muted) / 0.7);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.7);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(var(--primary) / 0.95), hsl(var(--accent) / 0.85));
+  border: 2px solid hsl(var(--muted) / 0.65);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--accent)));
+}
+
+*::-webkit-scrollbar-corner {
+  background: hsl(var(--muted) / 0.7);
+}
+
 body {
   @apply bg-background text-foreground;
   font-family: var(--font-body), "Segoe UI", sans-serif;
@@ -76,6 +105,53 @@ h3 {
   background-size: 40px 40px;
   opacity: 0.2;
   z-index: -1;
+}
+
+.replay-transport-range {
+  --range-progress: 0%;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary)) 0 var(--range-progress),
+    hsl(var(--muted) / 0.9) var(--range-progress) 100%
+  );
+}
+
+.replay-transport-range::-webkit-slider-runnable-track {
+  height: 8px;
+  background: transparent;
+  border-radius: 999px;
+}
+
+.replay-transport-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 20px;
+  width: 20px;
+  margin-top: -6px;
+  border: 2px solid hsl(var(--background));
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.25);
+}
+
+.replay-transport-range::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: hsl(var(--muted) / 0.9);
+}
+
+.replay-transport-range::-moz-range-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+}
+
+.replay-transport-range::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border: 2px solid hsl(var(--background));
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.25);
 }
 
 @media (prefers-reduced-motion: no-preference) {
