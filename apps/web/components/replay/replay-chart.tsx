@@ -38,6 +38,8 @@ const PLOT_PADDING = {
 }
 
 const ZOOM_PERCENTS = [25, 50, 75, 100]
+const LIVELINE_BASE_BUFFER_RATIO = 0.05
+const LIVELINE_MOMENTUM_BUFFER_PIXELS = 37
 
 type EventCluster = {
   key: string
@@ -219,11 +221,10 @@ function padCandlesToReplayWindow(candles: Candle[], replayStart: number, replay
   }
 
   let padded = candles
-  const alignedReplayStart = alignDown(replayStart, stepMs)
-  if (alignedReplayStart < first.timestamp) {
+  if (replayStart < first.timestamp) {
     const leftPadding: Candle[] = []
-    for (let timestamp = alignedReplayStart; timestamp < first.timestamp; timestamp += stepMs) {
-      leftPadding.push({
+    for (let timestamp = first.timestamp - stepMs; timestamp > replayStart; timestamp -= stepMs) {
+      leftPadding.unshift({
         timestamp,
         open: seedPrice,
         high: seedPrice,
@@ -232,6 +233,14 @@ function padCandlesToReplayWindow(candles: Candle[], replayStart: number, replay
         volume: 0
       })
     }
+    leftPadding.unshift({
+      timestamp: replayStart,
+      open: seedPrice,
+      high: seedPrice,
+      low: seedPrice,
+      close: seedPrice,
+      volume: 0
+    })
     padded = [...leftPadding, ...padded]
   }
 
@@ -241,10 +250,9 @@ function padCandlesToReplayWindow(candles: Candle[], replayStart: number, replay
     return padded
   }
 
-  const alignedReplayEnd = alignDown(replayEnd, stepMs)
-  if (alignedReplayEnd > last.timestamp) {
+  if (replayEnd > last.timestamp) {
     const rightPadding: Candle[] = []
-    for (let timestamp = last.timestamp + stepMs; timestamp <= alignedReplayEnd; timestamp += stepMs) {
+    for (let timestamp = last.timestamp + stepMs; timestamp < replayEnd; timestamp += stepMs) {
       rightPadding.push({
         timestamp,
         open: tailPrice,
@@ -254,6 +262,14 @@ function padCandlesToReplayWindow(candles: Candle[], replayStart: number, replay
         volume: 0
       })
     }
+    rightPadding.push({
+      timestamp: replayEnd,
+      open: tailPrice,
+      high: tailPrice,
+      low: tailPrice,
+      close: tailPrice,
+      volume: 0
+    })
     padded = [...padded, ...rightPadding]
   }
 
@@ -270,10 +286,15 @@ export function ReplayChart({
   pnl,
   pnlStatus
 }: ReplayChartProps) {
+  const chartRef = useRef<HTMLDivElement | null>(null)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
   const [zoomPercent, setZoomPercent] = useState(100)
   const [chartStyle, setChartStyle] = useState<"line" | "candles">("line")
   const [hoveredClusterKey, setHoveredClusterKey] = useState<string | null>(null)
   const [hoverPoint, setHoverPoint] = useState<{ time: number; value: number } | null>(null)
+  const [tooltipAnchor, setTooltipAnchor] = useState<{ x: number; y: number } | null>(null)
+  const [tooltipPosition, setTooltipPosition] = useState<{ left: number; top: number } | null>(null)
+  const [chartWidthPx, setChartWidthPx] = useState(1600)
   const chartNowSecRef = useRef<number>(Math.floor(Date.now() / 1000))
   const closeTooltipTimerRef = useRef<number | null>(null)
 
@@ -319,6 +340,20 @@ export function ReplayChart({
     percent === 100 || fullWindowSeconds * (percent / 100) >= minZoomWindowSeconds
 
   useEffect(() => {
+    if (!chartRef.current) {
+      return
+    }
+
+    const node = chartRef.current
+    const updateSize = () => setChartWidthPx(node.getBoundingClientRect().width)
+    updateSize()
+
+    const observer = new ResizeObserver(updateSize)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
     if (!isZoomAllowed(zoomPercent)) {
       setZoomPercent(100)
     }
@@ -328,9 +363,22 @@ export function ReplayChart({
   const chartWindowSeconds = zoomPercent === 100
     ? fullWindowSeconds
     : Math.min(fullWindowSeconds, Math.max(minZoomWindowSeconds, requestedWindow))
-  const renderWindowSeconds = chartStyle === "candles"
-    ? chartWindowSeconds + (candleWidth * 2)
+  const chartInnerWidthPx = Math.max(1, chartWidthPx - (PLOT_PADDING.left + PLOT_PADDING.right))
+  const livelineBufferRatio = Math.max(
+    LIVELINE_BASE_BUFFER_RATIO,
+    LIVELINE_MOMENTUM_BUFFER_PIXELS / chartInnerWidthPx
+  )
+  const visibleWindowSeconds = chartStyle === "candles"
+    ? chartWindowSeconds + candleWidth
     : chartWindowSeconds
+  const livelineWindowSeconds = Math.max(
+    60,
+    Math.ceil(visibleWindowSeconds / (1 - livelineBufferRatio))
+  )
+  const edgeGuardSeconds = Math.max(
+    candleWidth,
+    Math.ceil(livelineWindowSeconds * livelineBufferRatio)
+  )
 
   const tfLabel = timeframeLabel(candleWidth)
   const includeDateInAxis = chartWindowSeconds >= 24 * 60 * 60
@@ -342,26 +390,57 @@ export function ReplayChart({
   )
   const revealLeftPercent = `${(progress * 100).toFixed(4)}%`
 
-  let chartCandles = ordered.map((candle) => toLivelineCandle(candle, timeOffsetSec))
-  if (chartCandles.length === 1) {
-    const only = chartCandles[0]
-    chartCandles = [
-      { ...only, time: only.time - candleWidth, close: only.open, high: only.open, low: only.open },
-      only
-    ]
-  }
+  const baseChartCandles = ordered.map((candle) => toLivelineCandle(candle, timeOffsetSec))
+  const lineRenderData = baseChartCandles.length > 0
+    ? [
+        {
+          time: baseChartCandles[0].time - edgeGuardSeconds,
+          value: baseChartCandles[0].close
+        },
+        ...baseChartCandles.map((candle) => ({ time: candle.time, value: candle.close })),
+        {
+          time: baseChartCandles[baseChartCandles.length - 1].time + edgeGuardSeconds,
+          value: baseChartCandles[baseChartCandles.length - 1].close
+        }
+      ]
+    : []
 
-  const lineData = chartCandles.map((candle) => ({
+  const candleRenderData = baseChartCandles.length > 0
+    ? [
+        {
+          ...baseChartCandles[0],
+          time: baseChartCandles[0].time - edgeGuardSeconds,
+          close: baseChartCandles[0].open,
+          high: baseChartCandles[0].open,
+          low: baseChartCandles[0].open
+        },
+        ...baseChartCandles,
+        {
+          ...baseChartCandles[baseChartCandles.length - 1],
+          time: baseChartCandles[baseChartCandles.length - 1].time + edgeGuardSeconds,
+          close: baseChartCandles[baseChartCandles.length - 1].close,
+          high: baseChartCandles[baseChartCandles.length - 1].close,
+          low: baseChartCandles[baseChartCandles.length - 1].close
+        }
+      ]
+    : []
+
+  const lineData = lineRenderData.map((point) => ({
+    time: point.time,
+    value: point.value
+  }))
+
+  const hoverSnapData = baseChartCandles.map((candle) => ({
     time: candle.time,
     value: candle.close
   }))
   const findNearestLinePoint = (targetTime: number) => {
-    if (lineData.length === 0) {
+    if (hoverSnapData.length === 0) {
       return null
     }
-    return lineData.reduce((best, candidate) => {
+    return hoverSnapData.reduce((best, candidate) => {
       return Math.abs(candidate.time - targetTime) < Math.abs(best.time - targetTime) ? candidate : best
-    }, lineData[0])
+    }, hoverSnapData[0])
   }
   const formatTime = (t: number) => formatAxisTime(t - timeOffsetSec, includeDateInAxis)
   const windowLabel = formatDuration((replayEnd - replayStart))
@@ -417,14 +496,14 @@ export function ReplayChart({
   }, [occurredEvents, replayStart, clusterBucketMs])
 
   const visibleClusters = useMemo(() => {
-    if (!hasCandles || chartCandles.length === 0) {
+    if (!hasCandles || baseChartCandles.length === 0) {
       return []
     }
 
-    const rightEdgeSec = chartCandles[chartCandles.length - 1].time
-    const leftEdgeSec = rightEdgeSec - renderWindowSeconds
-    const visibleCandles = chartCandles.filter((candle) => candle.time >= leftEdgeSec && candle.time <= rightEdgeSec)
-    const scope = visibleCandles.length > 0 ? visibleCandles : chartCandles
+    const rightEdgeSec = baseChartCandles[baseChartCandles.length - 1].time
+    const leftEdgeSec = rightEdgeSec - visibleWindowSeconds
+    const visibleCandles = baseChartCandles.filter((candle) => candle.time >= leftEdgeSec && candle.time <= rightEdgeSec)
+    const scope = visibleCandles.length > 0 ? visibleCandles : baseChartCandles
     const scopeTimes = scope.map((candle) => candle.time).sort((a, b) => a - b)
     if (scopeTimes.length === 0) {
       return []
@@ -463,11 +542,40 @@ export function ReplayChart({
         laneByXBucket.set(xBucket, lane + 1)
         return { ...cluster, lane }
       })
-  }, [clusters, renderWindowSeconds, timeOffsetSec, chartCandles, hasCandles, chartStyle])
+  }, [clusters, visibleWindowSeconds, timeOffsetSec, baseChartCandles, hasCandles, chartStyle])
 
   const hoveredCluster = hoveredClusterKey
     ? (visibleClusters.find((cluster) => cluster.key === hoveredClusterKey) ?? null)
     : null
+
+  const positionTooltip = () => {
+    if (!hoveredCluster || !chartRef.current || !tooltipRef.current) {
+      return
+    }
+
+    const chartRect = chartRef.current.getBoundingClientRect()
+    const tooltipRect = tooltipRef.current.getBoundingClientRect()
+    const inset = 8
+
+    const plotLeft = inset + PLOT_PADDING.left
+    const plotRight = chartRect.width - (inset + PLOT_PADDING.right)
+    const plotTop = inset + PLOT_PADDING.top
+    const plotBottom = chartRect.height - (inset + PLOT_PADDING.bottom)
+
+    const fallbackX = plotLeft + hoveredCluster.x * Math.max(1, plotRight - plotLeft)
+    const fallbackY = plotTop + hoveredCluster.y * Math.max(1, plotBottom - plotTop)
+    const anchorX = tooltipAnchor?.x ?? fallbackX
+    const anchorY = tooltipAnchor?.y ?? fallbackY
+
+    const preferLeft = anchorX > chartRect.width * 0.62
+    let left = preferLeft ? anchorX - tooltipRect.width - 14 : anchorX + 14
+    let top = anchorY - tooltipRect.height * 0.5
+
+    left = Math.max(inset, Math.min(chartRect.width - tooltipRect.width - inset, left))
+    top = Math.max(54, Math.min(chartRect.height - tooltipRect.height - inset, top))
+
+    setTooltipPosition({ left, top })
+  }
 
   const clearTooltipCloseTimer = () => {
     if (closeTooltipTimerRef.current !== null) {
@@ -490,8 +598,20 @@ export function ReplayChart({
     }
   }, [])
 
+  useEffect(() => {
+    if (!hoveredCluster) {
+      setTooltipPosition(null)
+      return
+    }
+    positionTooltip()
+    const onResize = () => positionTooltip()
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [hoveredCluster?.key, hoveredCluster?.x, hoveredCluster?.y, tooltipAnchor?.x, tooltipAnchor?.y])
+
   return (
     <div
+      ref={chartRef}
       className="relative h-[420px] w-full overflow-hidden rounded-2xl border border-border/80 bg-card/95"
       onMouseLeave={() => {
         clearTooltipCloseTimer()
@@ -570,15 +690,16 @@ export function ReplayChart({
               data={lineData}
               value={latestClose}
               mode={chartStyle === "line" ? "line" : "candle"}
-              candles={chartStyle === "candles" ? chartCandles : undefined}
+              candles={chartStyle === "candles" ? candleRenderData : undefined}
               candleWidth={chartStyle === "candles" ? candleWidth : undefined}
-              window={renderWindowSeconds}
+              window={livelineWindowSeconds}
               theme="dark"
               color="#14b8a6"
               grid
               scrub={chartStyle === "line"}
               cursor={chartStyle === "line" ? "crosshair" : "default"}
               pulse={false}
+              paused
               lineMode={false}
               formatTime={formatTime}
               onHover={(point) => {
@@ -627,6 +748,12 @@ export function ReplayChart({
                       : `translate(-50%, calc(-50% - ${cluster.lane * 14}px))`
                   }}
                   onMouseEnter={() => {
+                    if (chartRef.current) {
+                      const chartRect = chartRef.current.getBoundingClientRect()
+                      const xPx = PLOT_PADDING.left + 8 + (cluster.x * (chartRect.width - (PLOT_PADDING.left + PLOT_PADDING.right + 16)))
+                      const yPx = PLOT_PADDING.top + 8 + (cluster.y * (chartRect.height - (PLOT_PADDING.top + PLOT_PADDING.bottom + 16)))
+                      setTooltipAnchor({ x: xPx, y: yPx })
+                    }
                     clearTooltipCloseTimer()
                     setHoveredClusterKey(cluster.key)
                   }}
@@ -654,20 +781,9 @@ export function ReplayChart({
 
           {hoveredCluster ? (
             <div
+              ref={tooltipRef}
               className="absolute z-50 w-[320px] pointer-events-auto"
-              style={
-                hoveredCluster.x > 0.7
-                  ? {
-                      left: `${Math.max(6, hoveredCluster.x * 100 - 36)}%`,
-                      top: `${Math.max(14, Math.min(86, hoveredCluster.y * 100 - 4))}%`,
-                      transform: "translateY(-50%)"
-                    }
-                  : {
-                      left: `${Math.max(6, Math.min(74, hoveredCluster.x * 100 + 3))}%`,
-                      top: `${Math.max(14, Math.min(86, hoveredCluster.y * 100 - 4))}%`,
-                      transform: "translateY(-50%)"
-                    }
-              }
+              style={tooltipPosition ? { left: tooltipPosition.left, top: tooltipPosition.top } : { left: 8, top: 56 }}
               onMouseEnter={clearTooltipCloseTimer}
               onMouseLeave={scheduleTooltipClose}
             >
@@ -681,7 +797,7 @@ export function ReplayChart({
                   </div>
                   <p className="text-muted-foreground">{formatDateShort(hoveredCluster.ts)}</p>
                   <div
-                    className="max-h-40 space-y-1 overflow-y-auto overscroll-contain pr-1"
+                    className="max-h-56 space-y-1 overflow-y-auto overscroll-contain pr-1"
                     onWheel={(event) => {
                       event.stopPropagation()
                     }}
